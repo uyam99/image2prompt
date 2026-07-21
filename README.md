@@ -33,6 +33,11 @@ Windows対応とスタンドアロンアプリ化は、Mac版MVPの完成後に�
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 
+## 進捗記録
+
+- 作業が進んだ段階で[WORK_LOG.md](./WORK_LOG.md)へ追記します。
+- 作業を中断する際は[NEXT_RESUME_POINT.md](./NEXT_RESUME_POINT.md)を更新します。
+
 ## ライセンス
 
 未決定です。公開前にライセンスを選定します。
