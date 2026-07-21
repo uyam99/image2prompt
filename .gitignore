@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local configuration
+.env
+.env.*
+
+# Downloaded models and caches
+.cache/
+models/
+
+# Generated output
+outputs/
