@@ -115,20 +115,23 @@ def build_app() -> gr.Blocks:
                 show_fullscreen_button=False,
             )
 
-        image = gr.Image(
-            label="選択画像（単体アップロードも可能）",
-            type="filepath",
-            sources=["upload"],
-            height=520,
-        )
-        run_button = gr.Button("解析する", variant="primary")
-        status = gr.Markdown()
+        with gr.Row():
+            with gr.Column(scale=3):
+                image = gr.Image(
+                    label="選択画像（単体アップロードも可能）",
+                    type="filepath",
+                    sources=["upload"],
+                    height=520,
+                )
+            with gr.Column(scale=2):
+                run_button = gr.Button("解析する", variant="primary")
+                status = gr.Markdown()
+                danbooru_output = gr.Textbox(
+                    label="Danbooruタグ形式",
+                    lines=18,
+                    show_copy_button=True,
+                )
 
-        danbooru_output = gr.Textbox(
-            label="Danbooruタグ形式",
-            lines=8,
-            show_copy_button=True,
-        )
         natural_output = gr.Textbox(
             label="自然言語形式",
             lines=10,
