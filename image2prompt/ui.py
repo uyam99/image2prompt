@@ -73,10 +73,14 @@ def build_app() -> gr.Blocks:
         )
         folder_paths = gr.State([])
         with gr.Accordion("フォルダーから画像を選択", open=False):
-            folder_files = gr.File(
-                label="画像フォルダー",
+            folder_files = gr.UploadButton(
+                "Finderで画像フォルダーを選択",
                 file_count="directory",
                 type="filepath",
+            )
+            gr.Markdown(
+                "フォルダーはこのボタンから選択してください。"
+                "フォルダーのドラッグ＆ドロップには対応していません。"
             )
             folder_status = gr.Markdown()
             gallery = gr.Gallery(
@@ -142,7 +146,7 @@ def build_app() -> gr.Blocks:
             ],
             outputs=[danbooru_output, natural_output, status],
         )
-        folder_files.change(
+        folder_files.upload(
             fn=load_folder,
             inputs=folder_files,
             outputs=[gallery, folder_paths, folder_status],
