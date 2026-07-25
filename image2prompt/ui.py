@@ -13,22 +13,21 @@ IMAGE_SUFFIXES = frozenset(
 )
 
 
-def load_folder(files: list[str] | None) -> tuple[list[tuple[str, str]], list[str], str]:
+def load_folder(files: list[str] | None) -> tuple[list[str], list[str], str]:
     uploaded = [Path(path) for path in files or [] if Path(path).is_file()]
     paths = sorted(
         (str(path) for path in uploaded if path.suffix.casefold() in IMAGE_SUFFIXES),
         key=lambda path: Path(path).name.casefold(),
     )
-    gallery = [(path, Path(path).name) for path in paths]
     ignored = len(uploaded) - len(paths)
     status = (
-        f"{len(paths)}枚の画像を読み込みました。解析する画像を選択してください。"
+        f"**{len(paths)}枚**の画像を読み込みました。解析する画像を選択してください。"
         if paths
         else "対応画像が見つかりませんでした。"
     )
     if ignored:
         status += f" 画像以外の{ignored}件は除外しました。"
-    return gallery, paths, status
+    return paths, paths, status
 
 
 def select_folder_image(paths: list[str], evt: gr.SelectData) -> tuple[str, str]:
@@ -37,7 +36,7 @@ def select_folder_image(paths: list[str], evt: gr.SelectData) -> tuple[str, str]
     selected = paths[evt.index]
     if not Path(selected).is_file():
         raise gr.Error("選択した画像が見つかりません。")
-    return selected, f"選択中：{Path(selected).name}"
+    return selected, f"**選択中**：`{Path(selected).name}`"
 
 
 def run_analysis(
@@ -78,30 +77,30 @@ def build_app() -> gr.Blocks:
                 file_count="directory",
                 type="filepath",
             )
-            gr.Markdown(
+            folder_status = gr.Markdown(
                 "フォルダーはこのボタンから選択してください。"
                 "フォルダーのドラッグ＆ドロップには対応していません。"
             )
-            folder_status = gr.Markdown()
             gallery = gr.Gallery(
-                label="フォルダー内画像",
-                columns=6,
-                rows=2,
-                height=300,
-                object_fit="cover",
+                label="画像一覧（クリックして選択）",
+                columns=5,
+                rows=3,
+                height=480,
+                object_fit="contain",
                 allow_preview=False,
                 show_download_button=False,
                 show_fullscreen_button=False,
             )
 
         with gr.Row():
-            image = gr.Image(
-                label="入力画像（単体アップロード／フォルダーから選択）",
-                type="filepath",
-                sources=["upload"],
-                height=520,
-            )
-            with gr.Column():
+            with gr.Column(scale=3):
+                image = gr.Image(
+                    label="選択画像（単体アップロードも可能）",
+                    type="filepath",
+                    sources=["upload"],
+                    height=520,
+                )
+            with gr.Column(scale=2):
                 general_threshold = gr.Slider(
                     0,
                     1,

@@ -26,7 +26,7 @@ class UiTests(unittest.TestCase):
                 gr.SelectData(None, {"index": 1, "value": None}),
             )
 
-        self.assertEqual(gallery, [(str(first), "a.jpg"), (str(second), "b.png")])
+        self.assertEqual(gallery, [str(first), str(second)])
         self.assertEqual(selected, str(second))
         self.assertIn("2枚", status)
         self.assertIn("1件は除外", status)
