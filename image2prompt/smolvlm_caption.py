@@ -163,8 +163,8 @@ def main() -> None:
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
     parser.add_argument("--max-new-tokens", type=int, default=128)
     args = parser.parse_args()
-    if not 1 <= args.max_new_tokens <= 256:
-        parser.error("--max-new-tokens must be between 1 and 256")
+    if not 1 <= args.max_new_tokens <= 500:
+        parser.error("--max-new-tokens must be between 1 and 500")
 
     try:
         result = caption(

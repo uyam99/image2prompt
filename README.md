@@ -94,7 +94,11 @@ uv run image2prompt-caption /path/to/image.jpg
 
 被写体だけでなく、外見、衣装、姿勢、動作、背景、天候、照明、構図、色、
 画風を含む詳細な説明を生成します。生成上限は初期値128トークンで、
-`--max-new-tokens`により変更できます。
+`--max-new-tokens`により最大500トークンまで変更できます。
+
+```sh
+uv run image2prompt-caption /path/to/image.jpg --max-new-tokens 500
+```
 
 Intel Macでは512px入力、CPU実行を初期基準としています。使用モデル：
 [HuggingFaceTB/SmolVLM-256M-Instruct](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct)
