@@ -6,13 +6,14 @@ import argparse
 import json
 import os
 import time
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
 
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
-from transformers import AutoConfig, AutoProcessor  # noqa: E402
+from transformers import AutoConfig, AutoProcessor
 
 from .image_processing import ImageInputError, prepare_image
 
@@ -39,6 +40,22 @@ def _require_model_files(model_dir: Path) -> tuple[Path, Path, Path]:
     return paths
 
 
+@lru_cache(maxsize=1)
+def _load_caption_model(model_dir: Path):
+    vision_path, embed_path, decoder_path = _require_model_files(model_dir)
+    config = AutoConfig.from_pretrained(model_dir, local_files_only=True)
+    processor = AutoProcessor.from_pretrained(
+        model_dir,
+        local_files_only=True,
+        size={"longest_edge": 512},
+    )
+    sessions = [
+        ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+        for path in (vision_path, embed_path, decoder_path)
+    ]
+    return config, processor, *sessions
+
+
 def _extend_attention_mask(
     attention_mask: np.ndarray,
     input_ids: np.ndarray,
@@ -55,18 +72,13 @@ def caption(
     *,
     max_new_tokens: int = 128,
 ) -> dict[str, object]:
-    vision_path, embed_path, decoder_path = _require_model_files(model_dir)
-    config = AutoConfig.from_pretrained(model_dir, local_files_only=True)
-    processor = AutoProcessor.from_pretrained(
-        model_dir,
-        local_files_only=True,
-        size={"longest_edge": 512},
-    )
-    sessions = [
-        ort.InferenceSession(path, providers=["CPUExecutionProvider"])
-        for path in (vision_path, embed_path, decoder_path)
-    ]
-    vision_session, embed_session, decoder_session = sessions
+    (
+        config,
+        processor,
+        vision_session,
+        embed_session,
+        decoder_session,
+    ) = _load_caption_model(model_dir)
 
     # ponytail: reuse square input; restore original aspect if layout quality suffers.
     image = prepare_image(image_path, size=512).image

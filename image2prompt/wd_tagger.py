@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import time
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -78,6 +79,7 @@ def _select_tags(
     }
 
 
+@lru_cache(maxsize=1)
 def _load_model(
     model_dir: Path,
 ) -> tuple[ort.InferenceSession, list[str], list[int]]:
