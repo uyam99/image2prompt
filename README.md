@@ -104,13 +104,31 @@ Intel Macでは512px入力、CPU実行を初期基準としています。使用
 [HuggingFaceTB/SmolVLM-256M-Instruct](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct)
 （Apache-2.0）
 
+## 2種類のプロンプトを同時生成
+
+単一画像からDanbooruタグ形式と自然言語形式を同じJSONへ出力します。
+
+```sh
+uv run image2prompt-analyze /path/to/image.jpg
+```
+
+タグしきい値と自然言語の生成上限も指定できます。
+
+```sh
+uv run image2prompt-analyze \
+  --general-threshold 0.35 \
+  --character-threshold 0.85 \
+  --max-new-tokens 500 \
+  /path/to/image.jpg
+```
+
 ## 次のマイルストーン
 
 1. JPEG、PNG、WebP、BMP、TIFF、GIFの読み込み確認：完了
 2. EXIF回転、RGB変換、縦横比を維持した画像前処理：完了
 3. WD Tagger候補のローカル推論：完了
 4. 複数の代表画像での精度・速度測定：進行中
-5. 自然言語モデル候補の比較：SmolVLM-256Mを暫定採用
+5. 自然言語モデル候補の比較：SmolVLM-256MをMVPへ採用
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 

@@ -17,6 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
+image2prompt-analyze = "image2prompt.analyze:main"
 image2prompt-caption = "image2prompt.smolvlm_caption:main"
 image2prompt-check = "image2prompt.image_processing:main"
 image2prompt-tag = "image2prompt.wd_tagger:main"
