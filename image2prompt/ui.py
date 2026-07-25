@@ -71,6 +71,29 @@ def build_app() -> gr.Blocks:
             "画像からDanbooruタグ形式と自然言語形式のプロンプトを生成します。"
         )
         folder_paths = gr.State([])
+        with gr.Accordion("解析設定", open=False), gr.Row():
+            general_threshold = gr.Slider(
+                0,
+                1,
+                value=0.35,
+                step=0.01,
+                label="一般タグしきい値",
+            )
+            character_threshold = gr.Slider(
+                0,
+                1,
+                value=0.85,
+                step=0.01,
+                label="キャラクタータグしきい値",
+            )
+            max_new_tokens = gr.Slider(
+                32,
+                500,
+                value=128,
+                step=1,
+                label="自然言語の最大トークン数",
+            )
+
         with gr.Accordion("フォルダーから画像を選択", open=False):
             folder_files = gr.UploadButton(
                 "Finderで画像フォルダーを選択",
@@ -92,38 +115,14 @@ def build_app() -> gr.Blocks:
                 show_fullscreen_button=False,
             )
 
-        with gr.Row():
-            with gr.Column(scale=3):
-                image = gr.Image(
-                    label="選択画像（単体アップロードも可能）",
-                    type="filepath",
-                    sources=["upload"],
-                    height=520,
-                )
-            with gr.Column(scale=2):
-                general_threshold = gr.Slider(
-                    0,
-                    1,
-                    value=0.35,
-                    step=0.01,
-                    label="一般タグしきい値",
-                )
-                character_threshold = gr.Slider(
-                    0,
-                    1,
-                    value=0.85,
-                    step=0.01,
-                    label="キャラクタータグしきい値",
-                )
-                max_new_tokens = gr.Slider(
-                    32,
-                    500,
-                    value=128,
-                    step=1,
-                    label="自然言語の最大トークン数",
-                )
-                run_button = gr.Button("解析する", variant="primary")
-                status = gr.Markdown()
+        image = gr.Image(
+            label="選択画像（単体アップロードも可能）",
+            type="filepath",
+            sources=["upload"],
+            height=520,
+        )
+        run_button = gr.Button("解析する", variant="primary")
+        status = gr.Markdown()
 
         danbooru_output = gr.Textbox(
             label="Danbooruタグ形式",
