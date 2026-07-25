@@ -5,10 +5,34 @@ from unittest.mock import patch
 
 import gradio as gr
 
-from image2prompt.ui import load_folder, run_analysis, select_folder_image
+from image2prompt.ui import (
+    DEFAULT_SETTINGS,
+    load_folder,
+    load_settings,
+    run_analysis,
+    save_settings,
+    select_folder_image,
+)
 
 
 class UiTests(unittest.TestCase):
+    def test_persists_settings_and_recovers_from_invalid_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.json"
+            save_settings(0.42, 0.91, 320, path)
+
+            self.assertEqual(
+                load_settings(path),
+                {
+                    "general_threshold": 0.42,
+                    "character_threshold": 0.91,
+                    "max_new_tokens": 320,
+                },
+            )
+
+            path.write_text("{invalid", encoding="utf-8")
+            self.assertEqual(load_settings(path), DEFAULT_SETTINGS)
+
     def test_loads_and_selects_one_folder_image(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             first = Path(directory) / "a.jpg"

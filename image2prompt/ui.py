@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import gradio as gr
@@ -11,6 +12,64 @@ from .analyze import analyze
 IMAGE_SUFFIXES = frozenset(
     {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
 )
+SETTINGS_PATH = (
+    Path.home() / "Library" / "Application Support" / "image2prompt" / "settings.json"
+)
+DEFAULT_SETTINGS: dict[str, float | int] = {
+    "general_threshold": 0.35,
+    "character_threshold": 0.85,
+    "max_new_tokens": 128,
+}
+
+
+def _validated_settings(
+    general_threshold: object,
+    character_threshold: object,
+    max_new_tokens: object,
+) -> dict[str, float | int]:
+    general = float(general_threshold)
+    character = float(character_threshold)
+    tokens = int(max_new_tokens)
+    if not 0 <= general <= 1 or not 0 <= character <= 1 or not 32 <= tokens <= 500:
+        raise ValueError("設定値が許容範囲外です。")
+    return {
+        "general_threshold": general,
+        "character_threshold": character,
+        "max_new_tokens": tokens,
+    }
+
+
+def load_settings(path: Path = SETTINGS_PATH) -> dict[str, float | int]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return _validated_settings(
+            data["general_threshold"],
+            data["character_threshold"],
+            data["max_new_tokens"],
+        )
+    except (KeyError, OSError, TypeError, ValueError):
+        return DEFAULT_SETTINGS.copy()
+
+
+def save_settings(
+    general_threshold: float,
+    character_threshold: float,
+    max_new_tokens: float,
+    path: Path = SETTINGS_PATH,
+) -> str:
+    try:
+        settings = _validated_settings(
+            general_threshold,
+            character_threshold,
+            max_new_tokens,
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(path)
+    except (OSError, ValueError) as error:
+        raise gr.Error(f"解析設定を保存できませんでした：{error}") from error
+    return "解析設定を保存しました。"
 
 
 def load_folder(files: list[str] | None) -> tuple[list[str], list[str], str]:
@@ -65,6 +124,7 @@ def run_analysis(
 
 
 def build_app() -> gr.Blocks:
+    saved_settings = load_settings()
     with gr.Blocks(title="image2prompt") as app:
         gr.Markdown(
             "# image2prompt\n"
@@ -75,23 +135,26 @@ def build_app() -> gr.Blocks:
             general_threshold = gr.Slider(
                 0,
                 1,
-                value=0.35,
+                value=saved_settings["general_threshold"],
                 step=0.01,
                 label="一般タグしきい値",
             )
             character_threshold = gr.Slider(
                 0,
                 1,
-                value=0.85,
+                value=saved_settings["character_threshold"],
                 step=0.01,
                 label="キャラクタータグしきい値",
             )
             max_new_tokens = gr.Slider(
                 32,
                 500,
-                value=128,
+                value=saved_settings["max_new_tokens"],
                 step=1,
                 label="自然言語の最大トークン数",
+            )
+            settings_status = gr.Markdown(
+                "変更した解析設定は自動保存され、次回起動時に復元されます。"
             )
 
         with gr.Accordion("フォルダーから画像を選択", open=False):
@@ -147,6 +210,21 @@ def build_app() -> gr.Blocks:
             ],
             outputs=[danbooru_output, natural_output, status],
         )
+        for setting in (
+            general_threshold,
+            character_threshold,
+            max_new_tokens,
+        ):
+            setting.change(
+                fn=save_settings,
+                inputs=[
+                    general_threshold,
+                    character_threshold,
+                    max_new_tokens,
+                ],
+                outputs=settings_status,
+                show_progress="hidden",
+            )
         folder_files.upload(
             fn=load_folder,
             inputs=folder_files,
