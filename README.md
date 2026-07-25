@@ -53,6 +53,12 @@ uvx --from huggingface_hub hf download \
 uv run image2prompt-tag /path/to/image.jpg
 ```
 
+複数画像を指定すると、モデルを1回だけ読み込んで順番に処理します。
+
+```sh
+uv run image2prompt-tag /path/to/first.jpg /path/to/second.png
+```
+
 初期しきい値は一般タグ0.35、キャラクタータグ0.85です。必要なら
 `--general-threshold`と`--character-threshold`で変更できます。ratingは情報として
 表示しますが、現在は画像やタグの除外には使用しません。

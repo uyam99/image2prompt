@@ -78,24 +78,29 @@ def _select_tags(
     }
 
 
-def predict(
-    image_path: Path,
-    model_dir: Path = DEFAULT_MODEL_DIR,
-    *,
-    general_threshold: float = 0.35,
-    character_threshold: float = 0.85,
-) -> dict[str, object]:
+def _load_model(
+    model_dir: Path,
+) -> tuple[ort.InferenceSession, list[str], list[int]]:
     model_path = model_dir / "model.onnx"
     labels_path = model_dir / "selected_tags.csv"
     if not model_path.is_file() or not labels_path.is_file():
         raise FileNotFoundError(
             f"Model files not found in {model_dir}. See README.md for the download command."
         )
-
-    session = ort.InferenceSession(
-        model_path,
-        providers=["CPUExecutionProvider"],
+    return (
+        ort.InferenceSession(model_path, providers=["CPUExecutionProvider"]),
+        *_load_labels(labels_path),
     )
+
+
+def _predict_one(
+    image_path: Path,
+    session: ort.InferenceSession,
+    names: list[str],
+    categories: list[int],
+    general_threshold: float,
+    character_threshold: float,
+) -> dict[str, object]:
     model_input = session.get_inputs()[0]
     model_output = session.get_outputs()[0]
     target_size = int(model_input.shape[1])
@@ -107,7 +112,6 @@ def predict(
     started = time.perf_counter()
     scores = session.run([model_output.name], {model_input.name: image_array})[0][0]
     elapsed = time.perf_counter() - started
-    names, categories = _load_labels(labels_path)
     result = _select_tags(
         names,
         categories,
@@ -125,9 +129,45 @@ def predict(
     }
 
 
+def predict_many(
+    image_paths: list[Path],
+    model_dir: Path = DEFAULT_MODEL_DIR,
+    *,
+    general_threshold: float = 0.35,
+    character_threshold: float = 0.85,
+) -> list[dict[str, object]]:
+    session, names, categories = _load_model(model_dir)
+    return [
+        _predict_one(
+            image_path,
+            session,
+            names,
+            categories,
+            general_threshold,
+            character_threshold,
+        )
+        for image_path in image_paths
+    ]
+
+
+def predict(
+    image_path: Path,
+    model_dir: Path = DEFAULT_MODEL_DIR,
+    *,
+    general_threshold: float = 0.35,
+    character_threshold: float = 0.85,
+) -> dict[str, object]:
+    return predict_many(
+        [image_path],
+        model_dir,
+        general_threshold=general_threshold,
+        character_threshold=character_threshold,
+    )[0]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("image", type=Path)
+    parser.add_argument("images", nargs="+", type=Path)
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
     parser.add_argument("--general-threshold", type=float, default=0.35)
     parser.add_argument("--character-threshold", type=float, default=0.85)
@@ -140,16 +180,25 @@ def main() -> None:
         if not 0 <= value <= 1:
             parser.error(f"{name} must be between 0 and 1")
 
+    started = time.perf_counter()
     try:
-        result = predict(
-            args.image,
+        results = predict_many(
+            args.images,
             args.model_dir,
             general_threshold=args.general_threshold,
             character_threshold=args.character_threshold,
         )
     except (FileNotFoundError, ImageInputError, ValueError) as exc:
         parser.error(str(exc))
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if len(results) == 1:
+        output: object = results[0]
+    else:
+        output = {
+            "count": len(results),
+            "total_seconds": time.perf_counter() - started,
+            "results": results,
+        }
+    print(json.dumps(output, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
