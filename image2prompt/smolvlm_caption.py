@@ -19,9 +19,9 @@ from .image_processing import ImageInputError, prepare_image
 DEFAULT_MODEL_DIR = Path("models/smolvlm-256m-instruct")
 MODEL_REVISION = "7e3e67edbbed1bf9888184d9df282b700a323964"
 INSTRUCTION = (
-    "Write one English image-generation prompt under 35 words. "
-    "Describe only clearly visible subjects, clothing, action, setting, lighting, "
-    "and style. Do not name brands or artists."
+    "Describe this image in rich visual detail for an image generation model. "
+    "Include the subject, appearance, clothing, pose, action, setting, weather, "
+    "lighting, composition, colors, and art style. Do not name brands or artists."
 )
 
 
@@ -53,7 +53,7 @@ def caption(
     image_path: Path,
     model_dir: Path = DEFAULT_MODEL_DIR,
     *,
-    max_new_tokens: int = 64,
+    max_new_tokens: int = 128,
 ) -> dict[str, object]:
     vision_path, embed_path, decoder_path = _require_model_files(model_dir)
     config = AutoConfig.from_pretrained(model_dir, local_files_only=True)
@@ -161,7 +161,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("image", type=Path)
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
-    parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument("--max-new-tokens", type=int, default=128)
     args = parser.parse_args()
     if not 1 <= args.max_new_tokens <= 256:
         parser.error("--max-new-tokens must be between 1 and 256")
