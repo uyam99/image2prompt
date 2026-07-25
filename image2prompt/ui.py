@@ -153,9 +153,11 @@ def build_app() -> gr.Blocks:
                 step=1,
                 label="自然言語の最大トークン数",
             )
-            settings_status = gr.Markdown(
-                "変更した解析設定は自動保存され、次回起動時に復元されます。"
-            )
+            with gr.Column(min_width=220):
+                save_settings_button = gr.Button("解析設定を保存", size="sm")
+                settings_status = gr.Markdown(
+                    "変更後に保存すると、次回起動時に復元されます。"
+                )
 
         with gr.Accordion("フォルダーから画像を選択", open=False):
             folder_files = gr.UploadButton(
@@ -210,21 +212,16 @@ def build_app() -> gr.Blocks:
             ],
             outputs=[danbooru_output, natural_output, status],
         )
-        for setting in (
-            general_threshold,
-            character_threshold,
-            max_new_tokens,
-        ):
-            setting.change(
-                fn=save_settings,
-                inputs=[
-                    general_threshold,
-                    character_threshold,
-                    max_new_tokens,
-                ],
-                outputs=settings_status,
-                show_progress="hidden",
-            )
+        save_settings_button.click(
+            fn=save_settings,
+            inputs=[
+                general_threshold,
+                character_threshold,
+                max_new_tokens,
+            ],
+            outputs=settings_status,
+            show_progress="hidden",
+        )
         folder_files.upload(
             fn=load_folder,
             inputs=folder_files,
