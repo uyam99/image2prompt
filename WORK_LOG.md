@@ -90,3 +90,59 @@ uv run image2prompt-check /path/to/image.jpg
 - ONNX Runtime 1.20.1のIntel Mac上での導入確認
 - WD Tagger候補モデルと`selected_tags.csv`の取得
 - 1枚の画像からDanbooruタグと信頼度を出力する最小推論
+
+## 2026-07-25：WD Taggerのローカル推論
+
+### 実施内容
+
+- ONNX Runtime 1.20.1とNumPy 2系を依存関係へ追加した。
+- Intel Mac（x86_64）でONNX Runtimeの読み込みに成功した。
+- `CPUExecutionProvider`と`CoreMLExecutionProvider`が利用可能であることを確認した。
+- `SmilingWolf/wd-swinv2-tagger-v3`をリビジョン
+  `627aef95638667ddcaa3ac8ae625e88ea5b02f51`へ固定した。
+- `model.onnx`と`selected_tags.csv`だけを`models/`へ取得した。
+- ONNXモデルの入力が`[batch_size, 448, 448, 3]`のfloat32、出力が
+  `[batch_size, 10861]`であることを実物から確認した。
+- 標準ライブラリのCSV処理でrating、一般、キャラクターの3カテゴリを分離した。
+- 既存の`prepare_image()`を再利用し、RGB画像をBGRのfloat32配列へ変換した。
+- `image2prompt-tag`コマンドでタグ、信頼度、カンマ区切りプロンプトを
+  JSON出力できるようにした。
+- 成人向けコンテンツ専用の除外、停止、ON／OFF切り替えは実装していない。
+
+### 固定したモデル情報
+
+- モデル：`SmilingWolf/wd-swinv2-tagger-v3`
+- ライセンス：Apache-2.0
+- ONNXファイル：467 MB（表示上446 MiB）
+- SHA-256：
+  `e6774bff34d43bd49f75a47db4ef217dce701c9847b546523eb85ff6dbba1db1`
+- タグ数：10,861
+  - rating：4
+  - 一般：8,106
+  - キャラクター：2,751
+
+モデル本体、タグ表、ダウンロード用キャッシュはGitの管理対象外とした。
+
+### 検証結果
+
+- 全6テスト：成功
+- ユーザーが前処理確認に使用した1365×1820 JPEG：推論成功
+- 実行プロバイダー：`CPUExecutionProvider`
+- ONNX推論部分：約0.68秒
+- rating、一般タグ、キャラクタータグ、プロンプト文字列の出力：成功
+- 一般タグしきい値：0.35
+- キャラクタータグしきい値：0.85
+
+実行コマンド：
+
+```sh
+uv sync
+uv run python -m unittest
+uv run image2prompt-tag /path/to/image.jpg
+```
+
+### 次の作業
+
+- ユーザー環境で同じコマンドを実行し、タグ内容を目視確認する。
+- 複数の画像で精度と処理時間を比較し、初期しきい値を調整する。
+- Danbooruタグ抽出が安定した後、自然言語プロンプト生成候補を比較する。
