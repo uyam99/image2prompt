@@ -12,12 +12,24 @@ class AnalyzeTests(unittest.TestCase):
     )
     @patch(
         "image2prompt.analyze.predict",
-        return_value={"input": "image.jpg", "prompt": "tag prompt"},
+        return_value={
+            "input": "image.jpg",
+            "prompt": "tag prompt",
+            "general": [
+                {"tag": "1girl", "score": 0.99},
+                {"tag": "solo", "score": 0.90},
+            ],
+            "character": [],
+        },
     )
-    def test_combines_both_prompt_formats(self, _predict, _caption) -> None:
+    def test_combines_prompt_formats(self, _predict, _caption) -> None:
         result = analyze(Path("image.jpg"))
 
         self.assertEqual(result["danbooru"]["prompt"], "tag prompt")
+        self.assertEqual(
+            result["faithful_prompt"]["prompt"],
+            "The image shows one female subject alone.",
+        )
         self.assertEqual(
             result["natural_language"]["prompt"],
             "natural prompt",

@@ -7,6 +7,7 @@ import json
 import time
 from pathlib import Path
 
+from .faithful_prompt import build_faithful_prompt
 from .image_processing import ImageInputError
 from .smolvlm_caption import DEFAULT_MODEL_DIR as CAPTION_MODEL_DIR
 from .smolvlm_caption import caption
@@ -30,6 +31,10 @@ def analyze(
         general_threshold=general_threshold,
         character_threshold=character_threshold,
     )
+    faithful_prompt = build_faithful_prompt(
+        danbooru["general"],
+        danbooru["character"],
+    )
     natural_language = caption(
         image_path,
         caption_model_dir,
@@ -41,6 +46,7 @@ def analyze(
         "input": str(image_path.resolve()),
         "total_seconds": time.perf_counter() - started,
         "danbooru": danbooru,
+        "faithful_prompt": faithful_prompt,
         "natural_language": natural_language,
     }
 

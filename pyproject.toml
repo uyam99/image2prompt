@@ -21,6 +21,7 @@ dependencies = [
 image2prompt-analyze = "image2prompt.analyze:main"
 image2prompt-caption = "image2prompt.smolvlm_caption:main"
 image2prompt-check = "image2prompt.image_processing:main"
+image2prompt-faithful = "image2prompt.faithful_prompt:main"
 image2prompt-tag = "image2prompt.wd_tagger:main"
 image2prompt-web = "image2prompt.ui:main"
 

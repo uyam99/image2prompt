@@ -103,7 +103,7 @@ def run_analysis(
     general_threshold: float,
     character_threshold: float,
     max_new_tokens: float,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     if not image_path:
         raise gr.Error("画像を選択してください。")
 
@@ -114,13 +114,19 @@ def run_analysis(
         max_new_tokens=int(max_new_tokens),
     )
     danbooru = result["danbooru"]
+    faithful_prompt = result["faithful_prompt"]
     natural_language = result["natural_language"]
     rating = danbooru["rating"]
     status = (
         f"完了：{result['total_seconds']:.2f}秒 / "
         f"rating: {rating['tag']} ({rating['score']:.3f})"
     )
-    return danbooru["prompt"], natural_language["prompt"], status
+    return (
+        faithful_prompt["prompt"],
+        danbooru["prompt"],
+        natural_language["prompt"],
+        status,
+    )
 
 
 def build_app() -> gr.Blocks:
@@ -128,7 +134,8 @@ def build_app() -> gr.Blocks:
     with gr.Blocks(title="image2prompt") as app:
         gr.Markdown(
             "# image2prompt\n"
-            "画像からDanbooruタグ形式と自然言語形式のプロンプトを生成します。"
+            "画像から忠実度優先形式、Danbooruタグ形式、"
+            "SmolVLM自然言語形式のプロンプトを生成します。"
         )
         folder_paths = gr.State([])
         with gr.Accordion("解析設定", open=False), gr.Row():
@@ -191,14 +198,20 @@ def build_app() -> gr.Blocks:
             with gr.Column(scale=2):
                 run_button = gr.Button("解析する", variant="primary")
                 status = gr.Markdown()
-                danbooru_output = gr.Textbox(
-                    label="Danbooruタグ形式",
+                faithful_output = gr.Textbox(
+                    label="忠実度優先形式（推奨・ComfyUI向け）",
+                    info="信頼度0.50以上のWDタグを整理し、推測を加えず文章化します。",
                     lines=8,
                     show_copy_button=True,
                 )
+                danbooru_output = gr.Textbox(
+                    label="Danbooruタグ形式",
+                    lines=6,
+                    show_copy_button=True,
+                )
                 natural_output = gr.Textbox(
-                    label="自然言語形式",
-                    lines=8,
+                    label="SmolVLM自然言語形式（参考）",
+                    lines=6,
                     show_copy_button=True,
                 )
 
@@ -210,7 +223,12 @@ def build_app() -> gr.Blocks:
                 character_threshold,
                 max_new_tokens,
             ],
-            outputs=[danbooru_output, natural_output, status],
+            outputs=[
+                faithful_output,
+                danbooru_output,
+                natural_output,
+                status,
+            ],
         )
         save_settings_button.click(
             fn=save_settings,

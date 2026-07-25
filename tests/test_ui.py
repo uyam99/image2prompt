@@ -64,12 +64,21 @@ class UiTests(unittest.TestCase):
                 "prompt": "1girl, solo",
                 "rating": {"tag": "general", "score": 0.9},
             },
+            "faithful_prompt": {
+                "prompt": "The image shows one female subject alone."
+            },
             "natural_language": {"prompt": "A girl standing alone."},
         },
     )
     def test_formats_analysis_for_display(self, analyze_mock) -> None:
-        tags, natural, status = run_analysis("image.jpg", 0.35, 0.85, 128.0)
+        faithful, tags, natural, status = run_analysis(
+            "image.jpg",
+            0.35,
+            0.85,
+            128.0,
+        )
 
+        self.assertEqual(faithful, "The image shows one female subject alone.")
         self.assertEqual(tags, "1girl, solo")
         self.assertEqual(natural, "A girl standing alone.")
         self.assertIn("1.25秒", status)

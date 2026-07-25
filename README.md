@@ -1,16 +1,18 @@
 # image2prompt
 
-画像を解析し、画像生成向けの次の2種類のプロンプトを生成するローカルアプリです。
+画像を解析し、画像生成向けの次の3種類のプロンプトを生成するローカルアプリです。
 
+- 忠実度優先形式（推奨・ComfyUI向け）
 - Danbooruタグ形式
-- 自然言語形式
+- SmolVLM自然言語形式（参考）
 
 ## 現在の状態
 
 基本版：`v0.1.0`
 
 標準画像の前処理、WD SwinV2 Tagger v3によるDanbooruタグ抽出、
-SmolVLM-256Mによる自然言語プロンプト生成、単一画像Web UIを実装しています。
+タグを決定的に文章化する忠実度優先形式、SmolVLM-256Mによる自然言語
+プロンプト生成、単一画像Web UIを実装しています。
 
 GitHubリポジトリ（Private）：[uyam99/image2prompt](https://github.com/uyam99/image2prompt)
 
@@ -71,7 +73,21 @@ uv run image2prompt-tag /path/to/first.jpg /path/to/second.png
 使用モデル：[SmilingWolf/wd-swinv2-tagger-v3](https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3)
 （Apache-2.0）
 
-## 自然言語プロンプト生成
+## 忠実度優先プロンプト（推奨）
+
+WD Taggerで信頼度0.50以上となったタグを、競合・重複を除去してから定型文へ
+変換します。言語モデルによる推測を挟まないため、元画像にない物体や状態の
+追加を抑えたい場合に使用します。
+
+```sh
+uv run image2prompt-faithful /path/to/image.jpg
+```
+
+出力される`prompt`をComfyUIなどの画像生成環境へコピーして使用できます。
+比較実験用に`--faithful-threshold`でしきい値を変更できますが、現在の推奨値は
+3枚の固定画像で確認した0.50です。
+
+## SmolVLM自然言語プロンプト生成（参考）
 
 PyTorchを使わず、既存のONNX Runtimeで動くSmolVLM-256Mの公式ONNX版を使用します。
 初回だけ次のファイルを取得します（合計約540 MB）。
@@ -108,9 +124,10 @@ Intel Macでは512px入力、CPU実行を初期基準としています。使用
 [HuggingFaceTB/SmolVLM-256M-Instruct](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct)
 （Apache-2.0）
 
-## 2種類のプロンプトを同時生成
+## 3種類のプロンプトを同時生成
 
-単一画像からDanbooruタグ形式と自然言語形式を同じJSONへ出力します。
+単一画像から忠実度優先形式、Danbooruタグ形式、SmolVLM自然言語形式を
+同じJSONへ出力します。
 
 ```sh
 uv run image2prompt-analyze /path/to/image.jpg
@@ -134,9 +151,10 @@ uv run image2prompt-web
 
 表示された`http://127.0.0.1:7860`をブラウザーで開き、画像を選択して
 「解析する」を押します。一般タグとキャラクタータグのしきい値、自然言語の
-最大トークン数は、上部の「解析設定」を開くと変更できます。2種類の結果は
-個別にコピーできます。選択画像とDanbooruタグ形式は左右に並び、自然言語
-形式もタグ欄の下へまとめて表示されます。外部公開や画像の送信は行いません。
+最大トークン数は、上部の「解析設定」を開くと変更できます。3種類の結果は
+個別にコピーできます。選択画像の右側では、ComfyUI向けの忠実度優先形式を
+先頭に表示し、その下に比較用のDanbooruタグ形式とSmolVLM自然言語形式を
+表示します。外部公開や画像の送信は行いません。
 
 解析設定の3項目は「解析設定を保存」を押すと保存され、次回起動時に復元されます。
 Mac版の保存先は
@@ -159,7 +177,8 @@ Mac版の保存先は
 4. 単一画像Web UI：完了
 5. 自然言語モデル候補の比較：SmolVLM-256MをMVPへ採用
 6. フォルダー内の画像一覧と単一選択：完了
-7. 複数画像の一括処理、進捗表示、CSV出力：保留
+7. 忠実度優先プロンプト生成：完了
+8. 複数画像の一括処理、進捗表示、CSV出力：保留
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 
