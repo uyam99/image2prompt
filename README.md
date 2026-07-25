@@ -7,8 +7,12 @@
 
 ## 現在の状態
 
+基本版：`v0.1.0`
+
 標準画像の前処理、WD SwinV2 Tagger v3によるDanbooruタグ抽出、
 SmolVLM-256Mによる自然言語プロンプト生成、単一画像Web UIを実装しています。
+
+GitHubリポジトリ（Private）：[uyam99/image2prompt](https://github.com/uyam99/image2prompt)
 
 ## 対象環境
 
