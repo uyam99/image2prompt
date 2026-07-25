@@ -127,3 +127,6 @@ Florence-2経路にはONNX Runtime 1.20.1向けの互換処理が必要なので
 - 元画像を上書き、移動、削除しない。
 - Publicへ変更する前にライセンスとGit作成者情報を確認する。
 - GitHubリモートは`origin`として登録済み。今後も確認なしにpushしない。
+- 2026-07-25終了時点で通常の`git push`は成功しているが、
+  `gh auth status`はGitHub CLI用トークンを無効と判定した。PR作成など
+  `gh`のAPI操作が必要になった場合は`gh auth login -h github.com`をやり直す。
