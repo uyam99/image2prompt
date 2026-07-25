@@ -13,10 +13,14 @@ class UiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             first = Path(directory) / "a.jpg"
             second = Path(directory) / "b.png"
+            ignored = Path(directory) / ".DS_Store"
             first.write_bytes(b"first")
             second.write_bytes(b"second")
+            ignored.write_bytes(b"metadata")
 
-            gallery, paths, status = load_folder([str(second), str(first)])
+            gallery, paths, status = load_folder(
+                [str(ignored), str(second), str(first)]
+            )
             selected, selected_status = select_folder_image(
                 paths,
                 gr.SelectData(None, {"index": 1, "value": None}),
@@ -25,6 +29,7 @@ class UiTests(unittest.TestCase):
         self.assertEqual(gallery, [(str(first), "a.jpg"), (str(second), "b.png")])
         self.assertEqual(selected, str(second))
         self.assertIn("2枚", status)
+        self.assertIn("1件は除外", status)
         self.assertIn("b.png", selected_status)
 
     @patch(

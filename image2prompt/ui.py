@@ -8,14 +8,26 @@ import gradio as gr
 
 from .analyze import analyze
 
+IMAGE_SUFFIXES = frozenset(
+    {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
+)
+
 
 def load_folder(files: list[str] | None) -> tuple[list[tuple[str, str]], list[str], str]:
+    uploaded = [Path(path) for path in files or [] if Path(path).is_file()]
     paths = sorted(
-        (str(Path(path)) for path in files or [] if Path(path).is_file()),
+        (str(path) for path in uploaded if path.suffix.casefold() in IMAGE_SUFFIXES),
         key=lambda path: Path(path).name.casefold(),
     )
     gallery = [(path, Path(path).name) for path in paths]
-    status = f"{len(paths)}枚の画像を読み込みました。解析する画像を選択してください。"
+    ignored = len(uploaded) - len(paths)
+    status = (
+        f"{len(paths)}枚の画像を読み込みました。解析する画像を選択してください。"
+        if paths
+        else "対応画像が見つかりませんでした。"
+    )
+    if ignored:
+        status += f" 画像以外の{ignored}件は除外しました。"
     return gallery, paths, status
 
 
@@ -64,7 +76,6 @@ def build_app() -> gr.Blocks:
             folder_files = gr.File(
                 label="画像フォルダー",
                 file_count="directory",
-                file_types=["image"],
                 type="filepath",
             )
             folder_status = gr.Markdown()
