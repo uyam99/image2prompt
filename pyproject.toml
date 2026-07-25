@@ -9,12 +9,15 @@ description = "Generate image prompts from local image files."
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+    "Jinja2>=3.1,<4",
     "numpy>=2,<3",
     "onnxruntime==1.20.1",
     "Pillow>=12,<13",
+    "transformers==4.57.6",
 ]
 
 [project.scripts]
+image2prompt-caption = "image2prompt.smolvlm_caption:main"
 image2prompt-check = "image2prompt.image_processing:main"
 image2prompt-tag = "image2prompt.wd_tagger:main"
 

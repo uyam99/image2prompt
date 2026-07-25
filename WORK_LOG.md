@@ -182,3 +182,69 @@ uv run image2prompt-tag /path/to/first.jpg /path/to/second.jpg
 - 内容の異なる画像を追加して誤検出と不足タグを確認する。
 - Apple Silicon Macで同じモデルと一括処理を検証する。
 - 自然言語プロンプト生成候補の比較へ進む。
+
+## 2026-07-25：自然言語モデル候補の選定とSmolVLM検証
+
+### 追加のユーザー確認
+
+- ユーザー環境で異なる2画像の一括タグ処理に成功した。
+- 全体処理時間：約2.71秒
+- 画像別ONNX推論：約0.65秒、約0.60秒
+- 単一画像と複数画像の両経路がユーザー環境で動作することを確認した。
+
+### 候補比較
+
+- BLIP baseは画像キャプション専用で安定しているが、重みが約990 MBで
+  PyTorchを必要とする。
+- Florence-2-baseは約0.23Bパラメータで詳細キャプションに対応するが、
+  標準経路はPyTorchを必要とする。
+- SmolVLM-256M-Instructは約0.26Bパラメータで、画像説明に加えて公式ONNX重みがある。
+- PyTorchは2.3以降macOS x86_64 wheelを提供しないため、Intel Macと
+  Apple Silicon Macの共通経路ではPyTorch依存を避けることにした。
+- 既存のONNX Runtimeを再利用できるSmolVLM-256M-Instructを暫定候補とした。
+
+### 実装と互換性確認
+
+- SmolVLMをリビジョン
+  `7e3e67edbbed1bf9888184d9df282b700a323964`へ固定した。
+- PyTorchを追加せず、Transformers 4.57.6を画像プロセッサと
+  トークナイザーにだけ使用した。
+- Transformers 5.14.0はSmolVLM画像処理で`torchvision`を要求するため不採用とした。
+- 公式int8視覚エンコーダーは、ONNX Runtime 1.20.1のIntel CPUに
+  `ConvInteger`実装がなく読み込めなかった。
+- 視覚エンコーダーだけfloat32、埋め込みとデコーダーはint8とした。
+- 生成時のattention maskが過去トークンを保持するようにした。
+- `image2prompt-caption`コマンドを追加した。
+
+使用するONNXファイル：
+
+- `vision_encoder.onnx`：374.3 MB
+- `embed_tokens_int8.onnx`：28.4 MB
+- `decoder_model_merged_int8.onnx`：137.2 MB
+
+モデルとキャッシュは引き続きGitの管理対象外とした。
+
+### 実画像での比較結果
+
+512px入力：
+
+- 画像1：約0.99秒、21トークン
+  - `A girl with a pink sweater and pink lipstick is holding a heart-shaped balloon.`
+- 画像2：約0.86秒、14トークン
+  - `She is sitting on the sidewalk, drinking from a bottle.`
+- 主要被写体と動作は正しいが、背景や細部は省略される傾向がある。
+- 「見える要素のみ、35語以内、ブランド名禁止」の指示で、
+  存在しないブランド名の生成を抑制できた。
+
+1024px入力：
+
+- 約4.0～4.1秒
+- 512pxより遅く、説明品質も改善しなかった。
+- ブランド名の誤生成が再発したため、初期版では512px固定とした。
+
+### 次の作業
+
+- ユーザー環境で`image2prompt-caption`の出力を確認する。
+- 代表画像を増やし、背景や細部の省略が許容範囲か評価する。
+- 許容できる場合は、タグと自然言語を同時出力する単一画像MVPへ進む。
+- 品質不足の場合のみBLIPまたはFlorence-2の別実行方式を再検討する。

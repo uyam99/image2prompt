@@ -7,7 +7,8 @@
 
 ## 現在の状態
 
-標準画像の前処理と、WD SwinV2 Tagger v3によるDanbooruタグ抽出を実装しています。
+標準画像の前処理、WD SwinV2 Tagger v3によるDanbooruタグ抽出、
+SmolVLM-256Mによる自然言語プロンプト生成を実装しています。
 
 ## 対象環境
 
@@ -66,13 +67,42 @@ uv run image2prompt-tag /path/to/first.jpg /path/to/second.png
 使用モデル：[SmilingWolf/wd-swinv2-tagger-v3](https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3)
 （Apache-2.0）
 
+## 自然言語プロンプト生成
+
+PyTorchを使わず、既存のONNX Runtimeで動くSmolVLM-256Mの公式ONNX版を使用します。
+初回だけ次のファイルを取得します（合計約540 MB）。
+
+```sh
+uvx --from huggingface_hub hf download \
+  HuggingFaceTB/SmolVLM-256M-Instruct \
+  config.json generation_config.json preprocessor_config.json \
+  processor_config.json chat_template.json tokenizer.json \
+  tokenizer_config.json special_tokens_map.json added_tokens.json \
+  merges.txt vocab.json \
+  onnx/vision_encoder.onnx \
+  onnx/embed_tokens_int8.onnx \
+  onnx/decoder_model_merged_int8.onnx \
+  --revision 7e3e67edbbed1bf9888184d9df282b700a323964 \
+  --local-dir models/smolvlm-256m-instruct
+```
+
+自然言語プロンプトをJSONで表示します。
+
+```sh
+uv run image2prompt-caption /path/to/image.jpg
+```
+
+Intel Macでは512px入力、CPU実行を初期基準としています。使用モデル：
+[HuggingFaceTB/SmolVLM-256M-Instruct](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct)
+（Apache-2.0）
+
 ## 次のマイルストーン
 
 1. JPEG、PNG、WebP、BMP、TIFF、GIFの読み込み確認：完了
 2. EXIF回転、RGB変換、縦横比を維持した画像前処理：完了
 3. WD Tagger候補のローカル推論：完了
-4. 複数の代表画像での精度・速度測定
-5. 自然言語モデル候補の比較
+4. 複数の代表画像での精度・速度測定：進行中
+5. 自然言語モデル候補の比較：SmolVLM-256Mを暫定採用
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 
