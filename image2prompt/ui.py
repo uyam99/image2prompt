@@ -128,15 +128,15 @@ def build_app() -> gr.Blocks:
                 status = gr.Markdown()
                 danbooru_output = gr.Textbox(
                     label="Danbooruタグ形式",
-                    lines=18,
+                    lines=8,
+                    show_copy_button=True,
+                )
+                natural_output = gr.Textbox(
+                    label="自然言語形式",
+                    lines=8,
                     show_copy_button=True,
                 )
 
-        natural_output = gr.Textbox(
-            label="自然言語形式",
-            lines=10,
-            show_copy_button=True,
-        )
         run_button.click(
             fn=run_analysis,
             inputs=[
