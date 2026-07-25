@@ -9,6 +9,25 @@ import gradio as gr
 from .analyze import analyze
 
 
+def load_folder(files: list[str] | None) -> tuple[list[tuple[str, str]], list[str], str]:
+    paths = sorted(
+        (str(Path(path)) for path in files or [] if Path(path).is_file()),
+        key=lambda path: Path(path).name.casefold(),
+    )
+    gallery = [(path, Path(path).name) for path in paths]
+    status = f"{len(paths)}枚の画像を読み込みました。解析する画像を選択してください。"
+    return gallery, paths, status
+
+
+def select_folder_image(paths: list[str], evt: gr.SelectData) -> tuple[str, str]:
+    if not isinstance(evt.index, int) or not 0 <= evt.index < len(paths):
+        raise gr.Error("画像を選択できませんでした。")
+    selected = paths[evt.index]
+    if not Path(selected).is_file():
+        raise gr.Error("選択した画像が見つかりません。")
+    return selected, f"選択中：{Path(selected).name}"
+
+
 def run_analysis(
     image_path: str | None,
     general_threshold: float,
@@ -40,9 +59,29 @@ def build_app() -> gr.Blocks:
             "# image2prompt\n"
             "画像からDanbooruタグ形式と自然言語形式のプロンプトを生成します。"
         )
+        folder_paths = gr.State([])
+        with gr.Accordion("フォルダーから画像を選択", open=False):
+            folder_files = gr.File(
+                label="画像フォルダー",
+                file_count="directory",
+                file_types=["image"],
+                type="filepath",
+            )
+            folder_status = gr.Markdown()
+            gallery = gr.Gallery(
+                label="フォルダー内画像",
+                columns=6,
+                rows=2,
+                height=300,
+                object_fit="cover",
+                allow_preview=False,
+                show_download_button=False,
+                show_fullscreen_button=False,
+            )
+
         with gr.Row():
             image = gr.Image(
-                label="入力画像",
+                label="入力画像（単体アップロード／フォルダーから選択）",
                 type="filepath",
                 sources=["upload"],
                 height=520,
@@ -91,6 +130,16 @@ def build_app() -> gr.Blocks:
                 max_new_tokens,
             ],
             outputs=[danbooru_output, natural_output, status],
+        )
+        folder_files.change(
+            fn=load_folder,
+            inputs=folder_files,
+            outputs=[gallery, folder_paths, folder_status],
+        )
+        gallery.select(
+            fn=select_folder_image,
+            inputs=folder_paths,
+            outputs=[image, folder_status],
         )
     return app
 
