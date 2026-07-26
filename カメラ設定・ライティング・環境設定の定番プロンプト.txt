@@ -1,0 +1,59 @@
+AI画像生成（Midjourney、Stable Diffusion v2/XL/Cascade、Fluxなど）で、フォトリアル（写真の現実感）を極めるためのカメラ設定・ライティング・環境設定の定番プロンプト（呪文）をまとめました。
+
+現在の生成AIは「単語の羅列」よりも「自然な英文（自然言語）」を好む傾向があるため、地続きの文章として組み合わせやすい定型文サンプルを作成しています。
+
+1. カメラ設定・レンズの定番要素
+写真のクオリティを決定づけるのは、カメラの機種名、レンズの焦点距離、絞り値（F値）の具体的な指定です。これらを自然言語に組み込みます。
+
+カメラボディの指定: Shot on a Canon EOS R5, Sony α7R V camera,  Hasselblad medium format camera（中判カメラ特有の圧倒的な空気感が出ます）
+
+レンズ・焦点距離:
+
+ポートレート/クローズアップ: 85mm f/1.4 lens（美しいボケ味）
+
+スナップ/標準: 50mm f/1.2 prime lens（人間の視野に近い自然な描写）
+
+風景/建築/ダイナミック: 24mm wide-angle lens（広い画角）
+
+絞り値とボケ: shallow depth of field（浅い被写界深度＝背景ボケ）, sharp focus on the subject（被写体にカチッとピントが合っている状態）
+
+2. ライティング（照明）の定番要素
+写真の「情緒」や「リアリティ」は光の表現で決まります。ただ「Bright light」と書くのではなく、光の質や差し込み方を指定します。
+
+自然光（時間帯）: Golden hour light（夕方の柔らかく温かい光）, overcast daylight（曇天の均一で影の優しい光）, harsh midday sun（真昼の強い光と濃い影）
+
+スタジオ・演出光: Cinematic lighting（映画のようなドラマチックな光）, three-point lighting（スタジオ撮影の基本：主光・補助光・逆光）, rim lighting（被写体の輪郭を際立たせる背面からの光）
+
+光の効果: Volumetric dust motes floating in God rays（光条/薄明光線の中に舞うチリ＝空気感の演出）, soft diffused shadows（柔らかく拡散した影）
+
+3. 環境・テクスチャ（空気感・画質）の定番要素
+「8K」「Photorealistic」といった単語は古いAIの手法です。現在のAIには、写真特有の「欠陥（微細なディテール）」を記述する方がリアルになります。
+
+質感・ディテール: Microscopic skin texture（肌の微細な質感）, visible pores and fine hairs（毛穴や産毛の描写）, intricate clothing fibers（服の繊維の質感）
+
+カメラの特性: Subtle film grain（かすかな映画用フィルムの粒子感）, chromatic aberration（レンズ周辺のわずかな色収差＝レンズらしさの演出）
+
+4. すぐに使える！目的別・定型文サンプル
+プロンプトの末尾や、環境設定のセクションにそのまま繋げて使える自然言語のテンプレートです。[被写体] の部分に対象を入れて使用してください。
+
+① ポートレート・人物撮影用（圧倒的な美肌と背景ボケ）
+[被写体]. Shot on a Sony α7R V with an 85mm f/1.4 lens, shallow depth of field with a beautifully blurred background. The subject is in sharp focus, illuminating microscopic skin textures and fine details. Lit by soft cinematic three-point lighting with subtle rim light accentuating the contours. Captured in a highly detailed raw photo style with natural colors and faint film grain.
+
+解説: 85mm単焦点レンズによるボケ味と、スタジオ撮影のような立体的なライティングを再現し、肌のリアリティを極限まで高めるセットです。
+
+② スナップ・日常・ストリート用（エモーショナルな空気感）
+[被写体]. A candid street photograph shot on a Leica M11, 35mm lens at f/2.0. Captured during the golden hour, with warm, low-angle sunlight casting long shadows and creating a soft glow. Volumetric dust motes are visible in the sunbeams. The image has a cinematic, documentary feel with lifelike textures, rich contrast, and realistic lens flare.
+
+解説: ライカ特有のスナップ感と、夕方の「ゴールデンアワー」の光、そして光の中に舞うチリ（dust motes）を記述することで、その場の空気ごと切り取ったようなリアルさを出します。
+
+③ 風景・建築・壮大なロケーション用（シャープでダイナミック）
+[被写体]. A breathtaking landscape photograph captured on a Fujifilm GFX 100S medium format camera using a 24mm wide-angle lens at f/8 for maximum sharpness throughout the frame. Shot under dramatic overcast daylight, highlighting deep textures in the environment. High dynamic range with crisp details from the foreground to the horizon, completely free of artificial artifacts.
+
+解説: 中判カメラと絞り値 f/8（全体にピントを合わせる設定）を指定し、曇天（overcast）の均一な光でディテールを隅々までクッキリと描写させる設定です。
+
+プロンプト構築のコツ
+最近のFluxやMidjourney v6などでは、これらの環境設定を「文章の後半に、まるでカメラマンの撮影指示書のように自然につなげる」と非常に良く効きます。
+
+構成例: [被写体の詳細な説明], [服装やポーズ], [背景のシチュエーション]. [上記の定型文サンプル]
+
+作りたい写真の雰囲気に合わせて、カメラ名や時間帯の単語を入れ替えて試してみてください

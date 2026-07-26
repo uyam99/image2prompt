@@ -16,6 +16,24 @@ from .image_processing import ImageInputError, prepare_image
 
 DEFAULT_MODEL_DIR = Path("models/wd-swinv2-tagger-v3")
 MODEL_REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
+UNDERSCORE_TAGS = {
+    "._.",
+    "0_0",
+    "=_=",
+    ">_<",
+    "@_@",
+    "^_^",
+    "o_o",
+    "u_u",
+    "x_x",
+}
+
+
+def format_tag(tag: str) -> str:
+    """Render a Danbooru tag without changing meaningful underscores."""
+    if tag.startswith("score_") or tag in UNDERSCORE_TAGS:
+        return tag
+    return tag.replace("_", " ")
 
 
 def _load_labels(path: Path) -> tuple[list[str], list[int]]:
@@ -69,7 +87,7 @@ def _select_tags(
         "general": [{"tag": name, "score": score} for name, score in general],
         "character": [{"tag": name, "score": score} for name, score in character],
         "prompt": ", ".join(
-            name
+            format_tag(name)
             for name, _ in sorted(
                 general + character,
                 key=lambda item: item[1],

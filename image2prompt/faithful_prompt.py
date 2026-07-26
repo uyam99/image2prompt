@@ -7,9 +7,49 @@ import json
 from pathlib import Path
 
 from .image_processing import ImageInputError
-from .wd_tagger import DEFAULT_MODEL_DIR, predict
+from .wd_tagger import DEFAULT_MODEL_DIR, format_tag, predict
 
 DEFAULT_THRESHOLD = 0.50
+DEFAULT_ENVIRONMENT_PRESET = "none"
+
+ENVIRONMENT_PRESETS = {
+    "none": "",
+    "photo_portrait": (
+        "Use an 85mm portrait lens at f/1.4, with shallow depth of field and "
+        "sharp focus on the subject. Use soft diffused three-point lighting "
+        "and subtle rim light, with natural colors, fine surface textures, "
+        "and faint film grain."
+    ),
+    "photo_street": (
+        "Use a candid street-photography treatment with a 35mm lens at f/2.0. "
+        "Use warm low-angle golden-hour light, long soft shadows, rich natural "
+        "contrast, restrained lens flare, and a subtle documentary texture."
+    ),
+    "photo_landscape": (
+        "Use a 24mm wide-angle lens at f/8 with deep depth of field and crisp "
+        "detail from foreground to horizon. Use dramatic overcast daylight, "
+        "natural environmental textures, and balanced high dynamic range."
+    ),
+    "anime_clean": (
+        "Use a clean anime illustration style with precise line art, anime "
+        "coloring, controlled cel shading, a coherent color palette, and even "
+        "lighting. Keep shapes and costume details clearly separated."
+    ),
+    "anime_cinematic": (
+        "Use a cinematic anime screencap style with dynamic framing, polished "
+        "line art, layered cel shading, atmospheric depth, controlled "
+        "backlighting, soft bloom, and selective depth of field."
+    ),
+}
+
+ENVIRONMENT_PRESET_CHOICES = [
+    ("適用なし（忠実度優先）", "none"),
+    ("リアル・人物撮影", "photo_portrait"),
+    ("リアル・ストリート", "photo_street"),
+    ("リアル・風景・建築", "photo_landscape"),
+    ("アニメ・クリーンイラスト", "anime_clean"),
+    ("アニメ・シネマティック", "anime_cinematic"),
+]
 
 EXCLUDED_TAGS = {
     "brand_name_imitation",
@@ -88,9 +128,44 @@ SCENE_TAGS = {
     "sky": "the sky",
 }
 
+FRAMING_TAGS = {
+    "full_body": "a full-body view",
+    "upper_body": "an upper-body view",
+    "cowboy_shot": "a cowboy shot",
+    "portrait": "a portrait composition",
+    "close-up": "a close-up",
+    "wide_shot": "a wide shot",
+    "very_wide_shot": "a very wide shot",
+}
+
+CAMERA_TAGS = {
+    "dutch_angle": "a Dutch angle",
+    "from_above": "a high-angle viewpoint",
+    "from_below": "a low-angle viewpoint",
+    "fisheye": "a fisheye perspective",
+}
+
+FOCUS_TAGS = {
+    "depth_of_field": "depth of field",
+    "bokeh": "bokeh",
+}
+
+LIGHTING_TAGS = {
+    "sunlight": "sunlight",
+    "dappled_sunlight": "dappled sunlight",
+    "backlighting": "backlighting",
+    "sidelighting": "side lighting",
+    "moonlight": "moonlight",
+    "light_rays": "visible light rays",
+    "spotlight": "a spotlight",
+    "candlelight": "candlelight",
+    "stage_lights": "stage lighting",
+    "neon_lights": "neon lighting",
+}
+
 STYLE_TAGS = {
-    "photorealistic": "a photorealistic style",
-    "realistic": "a realistic style",
+    "photorealistic": "photorealistic",
+    "realistic": "realistic",
 }
 
 HAIR_COLORS = {
@@ -179,14 +254,17 @@ def build_faithful_prompt(
     character: list[dict[str, object]],
     *,
     threshold: float = DEFAULT_THRESHOLD,
+    environment_preset: str = DEFAULT_ENVIRONMENT_PRESET,
 ) -> dict[str, object]:
     """Convert sufficiently confident WD tags into conservative prose."""
     if not 0 <= threshold <= 1:
         raise ValueError("threshold must be between 0 and 1")
+    if environment_preset not in ENVIRONMENT_PRESETS:
+        raise ValueError(f"unknown environment preset: {environment_preset}")
 
     scores = _tag_scores(general, threshold)
     character_names = [
-        str(item["tag"]).replace("_", " ").title() for item in character
+        format_tag(str(item["tag"])).title() for item in character
     ]
     tags = set(scores)
     _remove_redundant_tags(tags)
@@ -206,7 +284,8 @@ def build_faithful_prompt(
         subject = "the main subject"
     if solo:
         subject += " alone"
-    sentences = [f"The image shows {subject}."]
+    image_sentences = [f"The image shows {subject}."]
+    environment_sentences: list[str] = []
     pronoun = "She" if female else "He" if male else "The subject"
 
     hair_color = next(
@@ -225,21 +304,23 @@ def build_faithful_prompt(
             0,
             " ".join(part for part in (hair_length, hair_color, "hair") if part),
         )
-    if appearance:
-        sentences.append(f"{pronoun} has {_join(appearance)}.")
-
     clothing = _collect(tags, CLOTHING_TAGS, consumed)
     if "pink_cardigan" in tags:
         clothing.append("a pink cardigan")
         consumed.add("pink_cardigan")
     topless = "topless" in tags
     consumed.add("topless")
+    description = []
+    if appearance:
+        description.append(f"has {_join(appearance)}")
     if topless and clothing:
-        sentences.append(f"{pronoun} is topless and wearing {_join(clothing)}.")
+        description.append(f"is topless and wearing {_join(clothing)}")
     elif topless:
-        sentences.append(f"{pronoun} is topless.")
+        description.append("is topless")
     elif clothing:
-        sentences.append(f"{pronoun} is wearing {_join(clothing)}.")
+        description.append(f"is wearing {_join(clothing)}")
+    if description:
+        image_sentences.append(f"{pronoun} {_join(description)}.")
 
     actions: list[str] = []
     for posture in ("standing", "sitting"):
@@ -266,11 +347,11 @@ def build_faithful_prompt(
         consumed.update({"holding_bottle", "bottle"} & tags)
     actions.extend(_collect(tags - consumed, ACTION_TAGS, consumed))
     if actions:
-        sentences.append(f"{pronoun} is {_join(actions)}.")
+        image_sentences.append(f"{pronoun} is {_join(actions)}.")
 
     objects = _collect(tags - consumed, OBJECT_TAGS, consumed)
     if objects:
-        sentences.append(f"Visible objects include {_join(objects)}.")
+        image_sentences.append(f"Visible objects include {_join(objects)}.")
 
     scene_parts: list[str] = []
     if "outdoors" in tags:
@@ -287,45 +368,64 @@ def build_faithful_prompt(
         scene = " ".join(scene_parts) or "a visible setting"
         if background:
             scene += f", with {_join(background)}"
-        sentences.append(f"The scene is {scene}.")
+        environment_sentences.append(f"The setting is {scene}.")
 
-    if "full_body" in tags:
-        sentences.append("The composition shows the full body.")
-        consumed.add("full_body")
+    framing = _collect(tags, FRAMING_TAGS, consumed)
+    camera = _collect(tags, CAMERA_TAGS, consumed)
+    focus = _collect(tags, FOCUS_TAGS, consumed)
+    lighting = _collect(tags, LIGHTING_TAGS, consumed)
+    if framing:
+        environment_sentences.append(f"The framing uses {_join(framing)}.")
+    if camera:
+        environment_sentences.append(f"The camera uses {_join(camera)}.")
+    if focus:
+        environment_sentences.append(f"The focus uses {_join(focus)}.")
+    if lighting:
+        environment_sentences.append(f"The lighting uses {_join(lighting)}.")
 
     wet = "wet" in tags
     blood = "blood" in tags
     consumed.update({"wet", "blood"} & tags)
     if wet and blood:
-        sentences.append("The subject is wet, with visible blood.")
+        image_sentences.append("The subject is wet, with visible blood.")
     elif wet:
-        sentences.append("The subject is wet.")
+        image_sentences.append("The subject is wet.")
     elif blood:
-        sentences.append("Visible blood is present.")
+        image_sentences.append("Visible blood is present.")
 
     if "navel" in tags:
-        sentences.append("The navel is visible.")
+        image_sentences.append("The navel is visible.")
         consumed.add("navel")
 
     styles = _collect(tags, STYLE_TAGS, consumed)
-    if styles:
-        sentences.append(f"The image has {_join(styles)}.")
+    if styles and environment_preset == DEFAULT_ENVIRONMENT_PRESET:
+        environment_sentences.append(f"The visual style is {_join(styles)}.")
+    preset_prompt = ENVIRONMENT_PRESETS[environment_preset]
+    if preset_prompt:
+        environment_sentences.append(preset_prompt)
 
     consumed.update(EXCLUDED_TAGS & tags)
     remaining = sorted(tags - consumed)
     if remaining:
-        details = [tag.replace("_", " ") for tag in remaining]
-        sentences.append(f"Additional visible details: {_join(details)}.")
+        details = [format_tag(tag) for tag in remaining]
+        image_sentences.append(f"Other visible details include {_join(details)}.")
 
     supporting_tags = [
         {"tag": tag, "score": scores[tag]}
         for tag in sorted(tags, key=lambda tag: scores[tag], reverse=True)
     ]
+    image_interpretation = " ".join(image_sentences)
+    environment_settings = " ".join(environment_sentences)
     return {
         "threshold": threshold,
         "supporting_tags": supporting_tags,
         "character_tags": character_names,
-        "prompt": " ".join(sentences),
+        "environment_preset": environment_preset,
+        "image_interpretation": image_interpretation,
+        "environment_settings": environment_settings,
+        "prompt": "\n\n".join(
+            part for part in (image_interpretation, environment_settings) if part
+        ),
     }
 
 
@@ -336,6 +436,11 @@ def main() -> None:
     parser.add_argument("--general-threshold", type=float, default=0.35)
     parser.add_argument("--character-threshold", type=float, default=0.85)
     parser.add_argument("--faithful-threshold", type=float, default=DEFAULT_THRESHOLD)
+    parser.add_argument(
+        "--environment-preset",
+        choices=ENVIRONMENT_PRESETS,
+        default=DEFAULT_ENVIRONMENT_PRESET,
+    )
     args = parser.parse_args()
 
     for value, name in (
@@ -357,6 +462,7 @@ def main() -> None:
             danbooru["general"],
             danbooru["character"],
             threshold=args.faithful_threshold,
+            environment_preset=args.environment_preset,
         )
     except (FileNotFoundError, ImageInputError, ValueError) as exc:
         parser.error(str(exc))

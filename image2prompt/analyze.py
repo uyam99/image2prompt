@@ -7,7 +7,11 @@ import json
 import time
 from pathlib import Path
 
-from .faithful_prompt import build_faithful_prompt
+from .faithful_prompt import (
+    DEFAULT_ENVIRONMENT_PRESET,
+    ENVIRONMENT_PRESETS,
+    build_faithful_prompt,
+)
 from .image_processing import ImageInputError
 from .smolvlm_caption import DEFAULT_MODEL_DIR as CAPTION_MODEL_DIR
 from .smolvlm_caption import caption
@@ -23,6 +27,8 @@ def analyze(
     general_threshold: float = 0.35,
     character_threshold: float = 0.85,
     max_new_tokens: int = 128,
+    include_natural_language: bool = True,
+    environment_preset: str = DEFAULT_ENVIRONMENT_PRESET,
 ) -> dict[str, object]:
     started = time.perf_counter()
     danbooru = predict(
@@ -34,21 +40,25 @@ def analyze(
     faithful_prompt = build_faithful_prompt(
         danbooru["general"],
         danbooru["character"],
-    )
-    natural_language = caption(
-        image_path,
-        caption_model_dir,
-        max_new_tokens=max_new_tokens,
+        environment_preset=environment_preset,
     )
     danbooru.pop("input")
-    natural_language.pop("input")
-    return {
+    result = {
         "input": str(image_path.resolve()),
         "total_seconds": time.perf_counter() - started,
         "danbooru": danbooru,
         "faithful_prompt": faithful_prompt,
-        "natural_language": natural_language,
     }
+    if include_natural_language:
+        natural_language = caption(
+            image_path,
+            caption_model_dir,
+            max_new_tokens=max_new_tokens,
+        )
+        natural_language.pop("input")
+        result["natural_language"] = natural_language
+        result["total_seconds"] = time.perf_counter() - started
+    return result
 
 
 def main() -> None:
@@ -59,6 +69,11 @@ def main() -> None:
     parser.add_argument("--general-threshold", type=float, default=0.35)
     parser.add_argument("--character-threshold", type=float, default=0.85)
     parser.add_argument("--max-new-tokens", type=int, default=128)
+    parser.add_argument(
+        "--environment-preset",
+        choices=ENVIRONMENT_PRESETS,
+        default=DEFAULT_ENVIRONMENT_PRESET,
+    )
     args = parser.parse_args()
 
     for value, name in (
@@ -78,6 +93,7 @@ def main() -> None:
             general_threshold=args.general_threshold,
             character_threshold=args.character_threshold,
             max_new_tokens=args.max_new_tokens,
+            environment_preset=args.environment_preset,
         )
     except (FileNotFoundError, ImageInputError, ValueError) as exc:
         parser.error(str(exc))

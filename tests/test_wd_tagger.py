@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from image2prompt.wd_tagger import _select_tags
+from image2prompt.wd_tagger import _select_tags, format_tag
 
 
 class TagSelectionTests(unittest.TestCase):
@@ -22,8 +22,13 @@ class TagSelectionTests(unittest.TestCase):
         )
         self.assertEqual(
             result["prompt"],
-            "hatsune_miku, solo, blue_eyes",
+            "hatsune miku, solo, blue eyes",
         )
+
+    def test_preserves_only_meaningful_underscores(self) -> None:
+        self.assertEqual(format_tag("long_hair"), "long hair")
+        self.assertEqual(format_tag("score_9"), "score_9")
+        self.assertEqual(format_tag("@_@"), "@_@")
 
 
 if __name__ == "__main__":

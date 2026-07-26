@@ -27,13 +27,15 @@ class FaithfulPromptTests(unittest.TestCase):
         )
         prompt = result["prompt"]
 
+        self.assertNotIn("[Image interpretation]", prompt)
+        self.assertNotIn("[Environment settings]", prompt)
         self.assertIn("short brown hair", prompt)
         self.assertIn("topless and wearing panties", prompt)
         self.assertIn("covering her chest", prompt)
-        self.assertIn("a photorealistic style", prompt)
+        self.assertIn("The visual style is photorealistic.", prompt)
         self.assertNotIn("bikini", prompt)
         self.assertNotIn("swimsuit", prompt)
-        self.assertNotIn("a realistic style", prompt)
+        self.assertNotIn("The visual style is realistic.", prompt)
 
     def test_combines_supported_objects_and_actions(self) -> None:
         result = build_faithful_prompt(
@@ -74,6 +76,67 @@ class FaithfulPromptTests(unittest.TestCase):
 
         self.assertIn("one female subject", result["prompt"])
         self.assertNotIn("pink hair", result["prompt"])
+
+    def test_adds_detected_composition_and_lighting(self) -> None:
+        result = build_faithful_prompt(
+            tags(
+                "1girl",
+                "full_body",
+                "from_below",
+                "depth_of_field",
+                "backlighting",
+                "light_rays",
+            ),
+            [],
+        )
+        prompt = result["prompt"]
+
+        self.assertIn(
+            "The framing uses a full-body view.",
+            prompt,
+        )
+        self.assertIn(
+            "The camera uses a low-angle viewpoint.",
+            prompt,
+        )
+        self.assertIn(
+            "The focus uses depth of field.",
+            prompt,
+        )
+        self.assertIn(
+            "The lighting uses backlighting and visible light rays.",
+            prompt,
+        )
+        self.assertNotIn("full body", prompt)
+        self.assertEqual(
+            result["image_interpretation"],
+            "The image shows one female subject.",
+        )
+        self.assertIn("The camera uses", result["environment_settings"])
+
+    def test_adds_only_the_selected_environment_preset(self) -> None:
+        default_result = build_faithful_prompt(
+            tags("1girl", "photorealistic"),
+            [],
+        )
+        anime_result = build_faithful_prompt(
+            tags("1girl", "photorealistic"),
+            [],
+            environment_preset="anime_clean",
+        )
+
+        self.assertIn("photorealistic", default_result["prompt"])
+        self.assertNotIn("precise line art", default_result["prompt"])
+        self.assertIn("precise line art", anime_result["environment_settings"])
+        self.assertNotIn("photorealistic", anime_result["prompt"])
+        self.assertEqual(anime_result["environment_preset"], "anime_clean")
+
+        with self.assertRaises(ValueError):
+            build_faithful_prompt(
+                tags("1girl"),
+                [],
+                environment_preset="unknown",
+            )
 
 
 if __name__ == "__main__":

@@ -37,6 +37,22 @@ class AnalyzeTests(unittest.TestCase):
         self.assertNotIn("input", result["danbooru"])
         self.assertNotIn("input", result["natural_language"])
 
+    @patch("image2prompt.analyze.caption")
+    @patch(
+        "image2prompt.analyze.predict",
+        return_value={
+            "input": "image.jpg",
+            "prompt": "tag prompt",
+            "general": [{"tag": "1girl", "score": 0.99}],
+            "character": [],
+        },
+    )
+    def test_can_skip_reference_caption(self, _predict, caption_mock) -> None:
+        result = analyze(Path("image.jpg"), include_natural_language=False)
+
+        caption_mock.assert_not_called()
+        self.assertNotIn("natural_language", result)
+
 
 if __name__ == "__main__":
     unittest.main()
