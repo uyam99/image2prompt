@@ -1168,5 +1168,8 @@ uv run image2prompt-web
   モデル同梱、adhoc署名を検証する。
 - `.app`の実行権限を保つため、`ditto`でZIP化してから
   `image2prompt-macos-arm64`として14日間保存する。
-- 次はActionsの初回ビルド結果を確認し、成功後にApple Silicon実機で起動、
-  画像解析、フォルダー選択、終了を確認する。
+- Actions run `30740705505`で、arm64 runner確認、モデル取得、26テスト、
+  PyInstallerビルド、arm64判定、モデル同梱、adhoc署名、ZIP作成、Artifact保存の
+  全工程に成功した。
+- 次はArtifactをApple Silicon実機へ展開し、起動、画像解析、
+  フォルダー選択、終了を確認する。

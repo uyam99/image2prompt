@@ -77,8 +77,8 @@ Windows用の共通起動処理、PowerShellビルド手順、専用ICO、フォ
 ビルド、exeと同梱モデルの検証まで成功した。Artifactsの
 `image2prompt-windows-x64`をWindows実機へ展開し、専用ウィンドウとアイコン、
 単一画像解析、フォルダー選択、終了後にプロセスが残らないことを確認する。
-Apple Silicon版はGitHub Actionsの`macos-15` runnerでarm64版を生成し、
-ArtifactのZIPをApple Silicon実機で起動・検証する。
+Apple Silicon版はGitHub Actions run `30740705505`でarm64版の生成に成功した。
+Artifact `image2prompt-macos-arm64`のZIPをApple Silicon実機で起動・検証する。
 複数画像の一括処理、進捗表示、CSV出力は引き続き保留する。
 
 Finderの更新日順を比較する場合は、Finderの「グループ分け」と「表示順序」を
