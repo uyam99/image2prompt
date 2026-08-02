@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -46,9 +47,22 @@ SORT_DIRECTION_CHOICES = [
 SORT_DIRECTION_LABELS = {
     value: label for label, value in SORT_DIRECTION_CHOICES
 }
-SETTINGS_PATH = (
-    Path.home() / "Library" / "Application Support" / "image2prompt" / "settings.json"
-)
+
+
+def _default_settings_path() -> Path:
+    if sys.platform == "win32":
+        root = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        return root / "image2prompt" / "settings.json"
+    return (
+        Path.home()
+        / "Library"
+        / "Application Support"
+        / "image2prompt"
+        / "settings.json"
+    )
+
+
+SETTINGS_PATH = _default_settings_path()
 DEFAULT_SETTINGS: dict[str, float | str] = {
     "general_threshold": 0.35,
     "character_threshold": 0.85,
@@ -257,24 +271,37 @@ def choose_folder(
     sort_by: str,
     direction: str,
 ) -> tuple[str, list[str], list[str], str, None, None]:
-    if sys.platform != "darwin":
-        raise gr.Error("Finderでのフォルダー選択はmacOSで利用できます。")
-    result = subprocess.run(
-        [
-            "osascript",
-            "-e",
-            'POSIX path of (choose folder with prompt "画像フォルダーを選択")',
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode:
-        if "-128" in result.stderr:
-            raise gr.Error("フォルダー選択をキャンセルしました。")
-        raise gr.Error(f"Finderを開けませんでした：{result.stderr.strip()}")
+    if sys.platform == "win32":
+        try:
+            import webview
 
-    folder_path = result.stdout.strip()
+            selected = webview.active_window().create_file_dialog(
+                webview.FileDialog.FOLDER
+            )
+        except Exception as error:
+            raise gr.Error(f"フォルダー選択画面を開けませんでした：{error}") from error
+        if not selected:
+            raise gr.Error("フォルダー選択をキャンセルしました。")
+        folder_path = str(selected[0])
+    elif sys.platform == "darwin":
+        result = subprocess.run(
+            [
+                "osascript",
+                "-e",
+                'POSIX path of (choose folder with prompt "画像フォルダーを選択")',
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode:
+            if "-128" in result.stderr:
+                raise gr.Error("フォルダー選択をキャンセルしました。")
+            raise gr.Error(f"Finderを開けませんでした：{result.stderr.strip()}")
+        folder_path = result.stdout.strip()
+    else:
+        raise gr.Error("フォルダー選択はmacOSとWindowsで利用できます。")
+
     gallery, paths, status = load_folder(folder_path, sort_by, direction)
     return folder_path, gallery, paths, status, None, None
 
@@ -408,7 +435,7 @@ def build_app() -> gr.Blocks:
         with gr.Accordion("フォルダーから画像を選択", open=False):
             with gr.Row():
                 choose_folder_button = gr.Button(
-                    "Finderで画像フォルダーを選択",
+                    "画像フォルダーを選択",
                     variant="secondary",
                     scale=3,
                 )
@@ -452,7 +479,7 @@ def build_app() -> gr.Blocks:
                 run_button = gr.Button("解析する", variant="primary")
                 status = gr.Markdown()
                 faithful_output = gr.Textbox(
-                    label="忠実度優先形式（推奨・ComfyUI向け）",
+                    label="忠実度優先形式",
                     info="信頼度0.50以上のWDタグを整理し、推測を加えず文章化します。",
                     lines=8,
                     show_copy_button=True,
@@ -561,7 +588,7 @@ def main() -> None:
     build_app().queue(default_concurrency_limit=1).launch(
         server_name="127.0.0.1",
         share=False,
-        inbrowser=False,
+        inbrowser=os.environ.get("IMAGE2PROMPT_INBROWSER") == "1",
     )
 
 

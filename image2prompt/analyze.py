@@ -13,10 +13,16 @@ from .faithful_prompt import (
     build_faithful_prompt,
 )
 from .image_processing import ImageInputError
-from .smolvlm_caption import DEFAULT_MODEL_DIR as CAPTION_MODEL_DIR
-from .smolvlm_caption import caption
 from .wd_tagger import DEFAULT_MODEL_DIR as TAG_MODEL_DIR
 from .wd_tagger import predict
+
+CAPTION_MODEL_DIR = Path("models/smolvlm-256m-instruct")
+
+
+def _caption(*args, **kwargs):
+    from .smolvlm_caption import caption
+
+    return caption(*args, **kwargs)
 
 
 def analyze(
@@ -50,7 +56,7 @@ def analyze(
         "faithful_prompt": faithful_prompt,
     }
     if include_natural_language:
-        natural_language = caption(
+        natural_language = _caption(
             image_path,
             caption_model_dir,
             max_new_tokens=max_new_tokens,

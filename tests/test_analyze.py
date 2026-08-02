@@ -7,7 +7,7 @@ from image2prompt.analyze import analyze
 
 class AnalyzeTests(unittest.TestCase):
     @patch(
-        "image2prompt.analyze.caption",
+        "image2prompt.analyze._caption",
         return_value={"input": "image.jpg", "prompt": "natural prompt"},
     )
     @patch(
@@ -37,7 +37,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertNotIn("input", result["danbooru"])
         self.assertNotIn("input", result["natural_language"])
 
-    @patch("image2prompt.analyze.caption")
+    @patch("image2prompt.analyze._caption")
     @patch(
         "image2prompt.analyze.predict",
         return_value={

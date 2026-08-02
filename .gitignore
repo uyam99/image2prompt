@@ -19,3 +19,6 @@ models/
 
 # Generated output
 outputs/
+build/
+dist/
+*.spec

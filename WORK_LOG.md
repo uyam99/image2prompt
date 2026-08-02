@@ -1021,3 +1021,139 @@ uv run image2prompt-web
 - Web UI起動：成功
 - `http://127.0.0.1:7860`：HTTP 200
 - GitHubへのpushは、ユーザー確認後に実行する。
+
+## 2026-08-02：Florence-2比較CLIの追加
+
+### 方針
+
+- ユーザー確認により、Florence-2統合、Windows対応、スタンドアロン化を
+  順番に進めることにした。
+- 忠実度優先形式は既定の推奨出力として維持し、Florence-2通常詳細版を
+  背景と構図の比較用として追加する。
+- 高詳細版は以前の3画像比較で事実追加が増えたため採用しない。
+
+### 実装方式の再確認
+
+- 最新`onnxruntime-node 1.24.3`は実配布パッケージにmacOS Intel用バイナリが
+  なく、Intel Macでは起動できなかった。
+- Transformers.js 3.8.1と`onnxruntime-node 1.20.1`の固定構成は動作したが、
+  画像読込依存`sharp`に未修正のHigh脆弱性があったため採用しなかった。
+- Florence-2のONNXモデルを、既存のPython版ONNX Runtime、Transformersの
+  tokenizer・画像前処理、Pillowだけで実行する経路へ変更した。
+- 新しい本番依存、PyTorch、Node.jsは追加していない。このPython経路を
+  Macスタンドアロン版とWindows版で共通利用する。
+
+### 実装
+
+- `image2prompt/florence2_caption.py`を追加した。
+- 視覚エンコーダーはfloat32、埋め込み、言語エンコーダー、デコーダーは
+  int8 ONNXを使用する。
+- 通常詳細キャプションだけを生成する`image2prompt-florence` CLIを追加した。
+- encoder側のKVキャッシュを2トークン目以降も保持する回帰テストを追加した。
+
+### 検証
+
+- 全23テスト：成功
+- 静的チェック：成功
+- 保存済み代表画像でCLI実行：成功
+- Intel Mac CPU生成時間：約1.89秒
+- 出力：`In this image we can see a woman sitting on the bed. In the background, we can see the wall.`
+
+### 生成上限512トークンの確認
+
+- Florence-2の既定値と指定可能な上限を512トークンへ変更した。
+- ユーザー画像で512トークンを指定して再実行し、28トークン、約2.65秒で成功した。
+- 出力は変更前と完全に同じで、モデルが終了トークンを生成して正常終了した。
+- 全23テストと静的チェックに再度成功した。
+
+### Web UIの任意比較欄
+
+- 通常解析とは分離し、折りたたみ内の「Florence-2で比較」を押した場合だけ
+  Florence-2を実行するようにした。
+- 忠実度優先形式とDanbooru形式の通常解析経路は変更していない。
+- ユーザー画像をUI関数経由で実行し、28トークン、約2.48秒、CLIと同一文面を確認した。
+- 全24テスト、静的チェック、UI構築に成功した。
+- Web UIを`http://127.0.0.1:7860`で起動し、HTTP 200を確認した。
+- 次は画面上の操作をユーザーが確認後、Macスタンドアロン版へ進める。
+
+### 利用方法の再検討とUI撤去
+
+- ユーザー確認で、独立した比較欄は利用目的が分かりにくく、通常利用者を
+  混乱させると判断した。
+- 通常詳細版、高詳細版、背景質問、物体検出、領域説明を4画像で追加比較した。
+- 高詳細版は背景や衣装を詳しくする一方、目の色や髪の長さなどの誤情報も増えた。
+- 背景質問は短い正答を返したが、公式の定義済みタスクではなく、別の質問では
+  無関係な文を生成したため本番経路には採用しなかった。
+- 物体検出と領域説明は人物、顔、衣装を検出したが、背景補完には利用できなかった。
+- Florence-2のCLIと推論実装は開発・将来比較用として残し、Web UI欄だけ撤去した。
+- 現時点ではメイン自然言語へ統合せず、スタンドアロン版にも同梱しない。
+
+## 2026-08-02：Intel Mac用スタンドアロン版の試作
+
+### 方式
+
+- PyInstaller 6.21.0のone-folder型でmacOS `.app`を生成する方式を採用した。
+- PyInstallerはビルド時だけ`uv run --with`で使用し、本番依存には追加していない。
+- Python 3.12実行環境とWD SwinV2 Tagger v3をアプリへ同梱した。
+- Web UIで使用しないSmolVLM、Florence-2、Transformers、Tokenizersは除外した。
+- SmolVLMは統合CLIで必要な場合だけ読み込むよう遅延importへ変更した。
+- 同梱モデルの場所を環境変数で明示し、起動時の作業ディレクトリに依存しないようにした。
+
+### ビルド対応
+
+- `packaging/build_macos.sh`とmacOS用エントリーポイントを追加した。
+- Gradio、Gradio Client、safehttpx、groovyの実行時データを明示的に収集した。
+- Gradioが起動時に参照する`.py`と`.pyi`だけを追加するPyInstallerフックを作成した。
+- ビルドキャッシュはプロジェクト内`.cache/pyinstaller`へ固定した。
+- `build/`、`dist/`、自動生成されるspecファイルはGit追跡対象外とした。
+
+### Intel Mac実機検証
+
+- 生成物：`dist/image2prompt.app`
+- 実行形式：Mach-O x86_64
+- 実測サイズ：約799MB
+- 署名：ローカル検証用adhoc署名
+- スタンドアロン版の起動：成功
+- `http://127.0.0.1:7970`：HTTP 200
+- 同梱WDモデルでユーザー確認画像を解析：成功、約2.36秒
+- 忠実度優先プロンプトが通常版と同じ内容で生成されることを確認した。
+- ユーザーがFinderから`.app`を起動できることを確認した。
+- Intel Mac用スタンドアロン版の試作・実機確認を完了とする。
+- 次はWindows用スタンドアロン版のビルド手順を追加し、Windows実機で検証する。
+
+## 2026-08-02：スタンドアロン版のアプリ内ウィンドウ化
+
+- ユーザー確認により、外部ブラウザーを開く方式はスタンドアロン運用として
+  採用しないことにした。
+- Gradioの解析画面と内部サーバーは再利用し、pywebview 6.2.1でmacOSネイティブの
+  専用ウィンドウ内へ表示する最小構成へ変更した。
+- ウィンドウを閉じるとGradioの内部サーバーも停止するようにした。
+- PyInstallerのビルド時依存へpywebviewを追加し、外部ブラウザー起動設定を撤去した。
+- ソース版と再ビルドした`dist/image2prompt.app`の両方でアプリ内表示を確認した。
+- パッケージ版で確認画像を解析し、約2.32秒で正常な出力を得た。
+- アプリの通常終了後にプロセスとTCP 7860の待受が残らないことを確認した。
+- 24テスト、Ruff、`git diff --check`、adhoc署名検証に成功した。
+- 次はユーザーが再ビルド版をFinderから起動し、専用ウィンドウでの操作を確認する。
+- 確認用だった出力欄の「（推奨・ComfyUI向け）」表記を撤去し、ラベルを
+  「忠実度優先形式」へ簡潔化して`.app`を再ビルドした。
+- ユーザーが採用した専用アイコン案を1024px PNGとmacOS用ICNSで保存した。
+- `packaging/build_macos.sh`へ専用アイコンを指定し、再ビルドした`.app`の
+  `Info.plist`、同梱ICNS、Dock表示、adhoc署名を確認した。
+- Windows版では同じ1024px原画からICOを生成する。
+- ユーザーが専用アイコンの反映と`.app`の起動を確認した。
+- Intel Mac用スタンドアロン版を完了とし、次はWindows版へ進む。
+
+## 2026-08-02：Windows用スタンドアロン版の準備
+
+- macOS専用だった起動エントリーポイントをMac／Windows共通へ変更した。
+- PyInstaller 6.21.0とpywebview 6.2.1を使う`packaging/build_windows.ps1`を追加した。
+- 出力はone-folder型の`dist\image2prompt\image2prompt.exe`とした。
+- 採用済みの1024px原画から、7サイズを含むWindows用ICOを生成した。
+- Windowsでは専用ウィンドウのネイティブフォルダー選択画面を使用するようにした。
+- 設定保存先を`%APPDATA%\image2prompt\settings.json`へ分岐した。
+- 外部ブラウザー、SmolVLM、Florence-2はWindows配布版にも含めない。
+- WebView2はWindows 11同梱／Windows 10の大半に導入済みのEvergreen Runtimeを
+  使用し、固定版ランタイムは同梱しない。
+- 26テスト、Ruff、`git diff --check`に成功した。
+- PyInstallerはクロスコンパイル非対応のため、Windows x64実機でのビルド、起動、
+  画像解析、フォルダー選択、終了確認を次の検証点とする。

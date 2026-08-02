@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import time
 from functools import lru_cache
 from pathlib import Path
@@ -14,7 +15,12 @@ import onnxruntime as ort
 
 from .image_processing import ImageInputError, prepare_image
 
-DEFAULT_MODEL_DIR = Path("models/wd-swinv2-tagger-v3")
+DEFAULT_MODEL_DIR = Path(
+    os.environ.get(
+        "IMAGE2PROMPT_TAG_MODEL_DIR",
+        "models/wd-swinv2-tagger-v3",
+    )
+)
 MODEL_REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
 UNDERSCORE_TAGS = {
     "._.",

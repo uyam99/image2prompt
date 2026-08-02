@@ -4,7 +4,7 @@
 アプリです。Web UIでは混同を避けるため、自然言語は忠実度優先形式だけを
 表示します。
 
-- 忠実度優先形式（推奨・ComfyUI向け）
+- 忠実度優先形式
 - Danbooruタグ形式
 - SmolVLM自然言語形式（参考）
 
@@ -22,8 +22,10 @@ GitHubリポジトリ（Private）：[uyam99/image2prompt](https://github.com/uy
 
 - Apple Silicon Mac
 - Intel Mac
+- Windows
 
-Windows対応とスタンドアロンアプリ化は、Mac版MVPの完成後に検討します。
+Intel Mac用スタンドアロン版は実機確認済みです。Windows版はビルド手順を
+実装済みで実機検証待ち、Apple Silicon版は対象環境でビルド・検証します。
 
 ## 開発方針
 
@@ -108,6 +110,35 @@ uv run image2prompt-faithful \
 追加しません。プリセットを選択した場合は手動指定を優先し、解析された画風と
 プリセットの画風が重複しないようにします。
 
+## Florence-2詳細キャプション（開発・比較用）
+
+Florence-2-base-ftの通常詳細版をCLIから比較できます。現在はWeb UIの
+自然言語出力へ統合せず、スタンドアロン版にも同梱しません。PyTorchや
+Node.jsは追加せず、既存のPython版ONNX Runtimeで実行します。
+
+モデルはGitへ登録しないため、初回だけ次のファイルを取得します（約869 MB）。
+
+```sh
+uvx --from huggingface_hub hf download \
+  onnx-community/Florence-2-base-ft \
+  config.json preprocessor_config.json tokenizer.json tokenizer_config.json \
+  onnx/vision_encoder.onnx \
+  onnx/embed_tokens_int8.onnx \
+  onnx/encoder_model_int8.onnx \
+  onnx/decoder_model_merged_int8.onnx \
+  --revision fac887a509cb8264d5639f04674c04977c65d937 \
+  --local-dir models/transformers-js-cache/onnx-community/Florence-2-base-ft
+```
+
+```sh
+uv run image2prompt-florence /path/to/image.jpg --max-new-tokens 512
+```
+
+生成上限は512トークンです。モデルが終了を判断した場合は上限前に完了します。
+高詳細版は事実追加が増えたため使用しません。使用モデル：
+[onnx-community/Florence-2-base-ft](https://huggingface.co/onnx-community/Florence-2-base-ft)
+（MIT）
+
 ## SmolVLM自然言語プロンプト生成（参考）
 
 PyTorchを使わず、既存のONNX Runtimeで動くSmolVLM-256Mの公式ONNX版を使用します。
@@ -173,7 +204,7 @@ uv run image2prompt-web
 表示された`http://127.0.0.1:7860`をブラウザーで開き、画像を選択して
 「解析する」を押します。一般タグとキャラクタータグのしきい値は、上部の
 「解析設定」を開くと変更できます。選択画像の右側では、自然言語を
-「忠実度優先形式（推奨・ComfyUI向け）」の1欄へ集約し、その下に
+「忠実度優先形式」の1欄へ集約し、その下に
 Danbooruタグ形式を表示します。Web UIではSmolVLMを実行しません。
 「環境プリセット（任意）」からリアル人物、リアル・ストリート、
 リアル・風景・建築、アニメ・クリーン、アニメ・シネマティックを選べます。
@@ -190,7 +221,7 @@ Mac版の保存先は
 `~/Library/Application Support/image2prompt/settings.json`です。
 設定ファイルが存在しない場合や内容が壊れている場合は既定値を使用します。
 
-「フォルダーから画像を選択」を開き、「Finderで画像フォルダーを選択」ボタン
+「フォルダーから画像を選択」を開き、「画像フォルダーを選択」ボタン
 からフォルダーを指定すると、直下の画像が縦横比を保ったサムネイルで並びます。
 名前、更新日、種類による昇順・降順の並び替えに対応しています。macOSでは
 名前順にFinder相当の標準比較を使用し、数字、記号、日本語を現在の
@@ -202,6 +233,48 @@ Mac版の保存先は
 のファイルは自動的に除外します。
 フォルダー内の全画像を一括解析する機能はまだ実装していません。
 
+## Intel Mac用スタンドアロン版（試作）
+
+Pythonやuvを利用者側へ要求しないone-folder型の`.app`を作成します。
+
+```sh
+zsh packaging/build_macos.sh
+```
+
+生成先は`dist/image2prompt.app`です。ダブルクリックすると専用のアプリ内
+ウィンドウを開き、外部ブラウザーは使用しません。Python実行環境とWD Tagger
+モデルを同梱し、SmolVLMとFlorence-2は含めません。現在のIntel Mac実測サイズは
+約802MBです。専用アイコンは`packaging/assets/image2prompt.icns`を使用します。
+
+現在はローカル検証用のadhoc署名です。他のMacへ配布する前に正式なコード署名と
+notarizationが必要です。Apple Silicon版はarm64環境で同じスクリプトを実行して
+別途検証します。ビルドにはネットワーク接続が必要ですが、生成済みアプリの
+解析はローカルだけで動作します。
+
+## Windows用スタンドアロン版（試作）
+
+Windows x64環境で次を実行します。PyInstallerはクロスコンパイルできないため、
+Mac上ではWindows版を生成できません。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\packaging\build_windows.ps1
+```
+
+生成先は`dist\image2prompt\image2prompt.exe`です。配布時はexe単体ではなく、
+`dist\image2prompt`フォルダー全体を渡します。Python実行環境、WD Taggerモデル、
+専用アイコンを同梱し、外部ブラウザーを開かず専用ウィンドウで動作します。
+利用者側にPythonやuvは不要です。
+
+表示にはMicrosoft Edge WebView2 Runtimeを使用します。Windows 11には同梱され、
+大半のWindows 10環境にも導入済みですが、未導入環境では
+[Microsoft公式WebView2ページ](https://developer.microsoft.com/en-us/microsoft-edge/webview2)
+からEvergreen Runtimeを先にインストールします。設定は
+`%APPDATA%\image2prompt\settings.json`へ保存します。
+
+GitHubではActionsの「Build Windows standalone」を手動実行すると、同じビルドを
+Windows runner上で行います。成功後、runのArtifactsから
+`image2prompt-windows-x64`をダウンロードできます。成果物の保存期間は14日です。
+
 ## 次のマイルストーン
 
 1. JPEG、PNG、WebP、BMP、TIFF、GIFの読み込み確認：完了
@@ -212,6 +285,8 @@ Mac版の保存先は
 6. フォルダー内の画像一覧と単一選択：完了
 7. 忠実度優先プロンプト生成：完了
 8. 複数画像の一括処理、進捗表示、CSV出力：保留
+9. Intel Mac用スタンドアロン版：専用ウィンドウ・専用アイコンで実機確認完了
+10. Windows用スタンドアロン版：ビルド手順・OS分岐実装完了、実機確認待ち
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 

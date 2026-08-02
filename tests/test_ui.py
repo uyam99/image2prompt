@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import gradio as gr
@@ -10,6 +11,7 @@ from PIL import Image
 
 from image2prompt.ui import (
     DEFAULT_SETTINGS,
+    _default_settings_path,
     _sort_folder_images,
     choose_folder,
     estimate_prompt_tokens,
@@ -23,6 +25,19 @@ from image2prompt.ui import (
 
 
 class UiTests(unittest.TestCase):
+    @patch("image2prompt.ui.sys.platform", "win32")
+    @patch.dict(
+        "image2prompt.ui.os.environ",
+        {"APPDATA": r"C:\Users\test\AppData\Roaming"},
+    )
+    def test_uses_windows_settings_folder(self) -> None:
+        self.assertEqual(
+            _default_settings_path(),
+            Path(r"C:\Users\test\AppData\Roaming")
+            / "image2prompt"
+            / "settings.json",
+        )
+
     def test_persists_settings_and_recovers_from_invalid_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "settings.json"
@@ -164,6 +179,24 @@ class UiTests(unittest.TestCase):
         self.assertIsNone(preview)
         self.assertIsNone(selected)
         run_mock.assert_called_once()
+
+    @patch("image2prompt.ui.sys.platform", "win32")
+    def test_chooses_a_real_folder_with_windows_dialog(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            image = Path(directory) / "a.jpg"
+            Image.new("RGB", (10, 10), "red").save(image)
+            window = SimpleNamespace(
+                create_file_dialog=lambda _dialog_type: (directory,)
+            )
+            webview = SimpleNamespace(
+                active_window=lambda: window,
+                FileDialog=SimpleNamespace(FOLDER="folder"),
+            )
+            with patch.dict("sys.modules", {"webview": webview}):
+                folder, _, paths, _, _, _ = choose_folder("name", "ascending")
+
+        self.assertEqual(folder, directory)
+        self.assertEqual(paths, [str(image)])
 
     @patch(
         "image2prompt.ui.analyze",
