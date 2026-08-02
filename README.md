@@ -251,6 +251,10 @@ notarizationが必要です。Apple Silicon版はarm64環境で同じスクリ�
 別途検証します。ビルドにはネットワーク接続が必要ですが、生成済みアプリの
 解析はローカルだけで動作します。
 
+GitHubではActionsの「Build macOS Apple Silicon standalone」を手動実行すると、
+Apple Silicon runner上でarm64版を生成します。成功後、runのArtifactsから
+`image2prompt-macos-arm64`をダウンロードできます。成果物の保存期間は14日です。
+
 ## Windows用スタンドアロン版（試作）
 
 Windows x64環境で次を実行します。PyInstallerはクロスコンパイルできないため、
@@ -290,6 +294,7 @@ Windows x64での初回ビルドは
 8. 複数画像の一括処理、進捗表示、CSV出力：保留
 9. Intel Mac用スタンドアロン版：専用ウィンドウ・専用アイコンで実機確認完了
 10. Windows用スタンドアロン版：GitHub Actionsでexe生成完了、実機起動確認待ち
+11. Apple Silicon用スタンドアロン版：GitHub Actionsによるarm64ビルド準備完了
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 

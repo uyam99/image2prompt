@@ -1,0 +1,64 @@
+name: Build macOS Apple Silicon standalone
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - ".github/workflows/build-macos-arm64.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos-arm64:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+
+      - name: Download WD Tagger model
+        run: |
+          uvx --from huggingface_hub hf download \
+            SmilingWolf/wd-swinv2-tagger-v3 \
+            model.onnx selected_tags.csv \
+            --revision 627aef95638667ddcaa3ac8ae625e88ea5b02f51 \
+            --local-dir models/wd-swinv2-tagger-v3
+
+      - name: Run tests
+        run: uv run --with pytest pytest -q
+
+      - name: Build Apple Silicon application
+        run: ./packaging/build_macos.sh
+
+      - name: Verify bundle
+        run: |
+          test -f dist/image2prompt.app/Contents/MacOS/image2prompt
+          test -f dist/image2prompt.app/Contents/Resources/models/wd-swinv2-tagger-v3/model.onnx
+          test -f dist/image2prompt.app/Contents/Resources/models/wd-swinv2-tagger-v3/selected_tags.csv
+          file dist/image2prompt.app/Contents/MacOS/image2prompt | grep -q arm64
+          codesign --verify --deep --strict dist/image2prompt.app
+
+      - name: Create distribution ZIP
+        run: ditto -c -k --sequesterRsrc --keepParent dist/image2prompt.app image2prompt-macos-arm64.zip
+
+      - name: Upload Apple Silicon bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: image2prompt-macos-arm64
+          path: image2prompt-macos-arm64.zip
+          compression-level: 0
+          retention-days: 14

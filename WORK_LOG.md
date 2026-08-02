@@ -1160,3 +1160,13 @@ uv run image2prompt-web
 - 成功runは`30740190367`、成果物名は`image2prompt-windows-x64`、保存期間は14日。
 - 次は成果物をWindows実機へ展開し、専用ウィンドウ起動、画像解析、
   フォルダー選択、終了後にプロセスが残らないことを確認する。
+
+## 2026-08-02：Apple Silicon用スタンドアロン版の自動ビルド準備
+
+- GitHub ActionsのApple Silicon標準runner `macos-15`を使うworkflowを追加した。
+- 既存のMacビルドスクリプトをarm64環境で実行し、実行ファイルのarm64確認、
+  モデル同梱、adhoc署名を検証する。
+- `.app`の実行権限を保つため、`ditto`でZIP化してから
+  `image2prompt-macos-arm64`として14日間保存する。
+- 次はActionsの初回ビルド結果を確認し、成功後にApple Silicon実機で起動、
+  画像解析、フォルダー選択、終了を確認する。
