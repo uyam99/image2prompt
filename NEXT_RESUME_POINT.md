@@ -59,6 +59,23 @@ GitHubへコミットやタグを反映する場合は、実行前にユーザ�
 
 ## 次に着手する作業
 
+次回は新機能へ進む前に、ユーザーが実施する次の実機確認結果を確認する。
+
+1. Windows x64：Artifact `image2prompt-windows-x64`をフォルダーごと展開し、
+   `image2prompt.exe`の起動、専用アイコン、単一画像解析、フォルダー選択、
+   終了後にプロセスが残らないことを確認する。
+2. Apple Silicon：Artifact `image2prompt-macos-arm64`のZIPを展開し、
+   `.app`の起動、専用アイコン、単一画像解析、フォルダー選択、正常終了を確認する。
+
+Artifactの保存期間は14日。期限切れの場合はGitHub Actionsの
+「Build Windows standalone」または「Build macOS Apple Silicon standalone」を
+手動実行して再生成する。
+
+両OSの実機確認後、Global公開へ進む段階でGitHub ReleasesによるOS別配布、
+macOSの正式署名・notarization、Windowsのコード署名、チェックサム、
+ライセンスとモデル配布条件を検討する。インストーラーと自動更新は必要性が
+確認できるまで保留する。
+
 Florence-2通常詳細版の比較CLIを追加し、ユーザー画像でも動作確認した。
 生成上限を512トークンへ変更して同じ画像で再実行したところ、モデルが
 28トークンで終了し、出力は変更前と同一だった。忠実度優先形式は既定の

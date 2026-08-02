@@ -1173,3 +1173,17 @@ uv run image2prompt-web
   全工程に成功した。
 - 次はArtifactをApple Silicon実機へ展開し、起動、画像解析、
   フォルダー選択、終了を確認する。
+
+## 2026-08-02：本日の作業区切り
+
+- Intel Mac版はユーザー実機確認済み、Windows x64版とApple Silicon arm64版は
+  GitHub Actionsで配布用Artifactの生成まで完了した。
+- ユーザーが次回再開までにWindows版とApple Silicon版の実機起動を確認する。
+- 次回は実機確認結果を最初に確認し、不具合があれば各OS固有部分だけを修正する。
+- Global公開時の配布方法は別途検討する。候補はGitHub ReleasesへのOS別ZIP配置、
+  macOSの正式署名・notarization、Windowsのコード署名、チェックサム、
+  ライセンスと同梱モデルの配布条件の明記とする。
+- 正式公開用の署名、インストーラー、自動更新は実機確認完了まで実装しない。
+- 終了時検証はunittest 25件、pytest 26件＋subtest 6件、Ruff、
+  `git diff --check`に成功した。
+- 作業記録と再開ポイントをコミットして`main`へpushし、作業ツリーを閉じる。
