@@ -1155,5 +1155,8 @@ uv run image2prompt-web
 - WebView2はWindows 11同梱／Windows 10の大半に導入済みのEvergreen Runtimeを
   使用し、固定版ランタイムは同梱しない。
 - 26テスト、Ruff、`git diff --check`に成功した。
-- PyInstallerはクロスコンパイル非対応のため、Windows x64実機でのビルド、起動、
-  画像解析、フォルダー選択、終了確認を次の検証点とする。
+- GitHub ActionsのWindows Server 2025 x64 runnerで、モデル取得、26テスト、
+  PyInstallerビルド、exe・モデル・タグCSVの同梱確認に成功した。
+- 成功runは`30740190367`、成果物名は`image2prompt-windows-x64`、保存期間は14日。
+- 次は成果物をWindows実機へ展開し、専用ウィンドウ起動、画像解析、
+  フォルダー選択、終了後にプロセスが残らないことを確認する。

@@ -73,9 +73,9 @@ pywebviewの専用アプリ内ウィンドウへ変更した。再ビルドし�
 `dist/image2prompt.app`で、アプリ内表示、実画像解析、終了後の内部サーバー停止まで
 自動検証済み。ユーザーによるFinder起動と専用アイコンの反映確認も完了した。
 Windows用の共通起動処理、PowerShellビルド手順、専用ICO、フォルダー選択、設定
-保存先を実装した。次はWindows x64環境で
-`powershell -ExecutionPolicy Bypass -File .\packaging\build_windows.ps1`を実行する。
-生成された`dist\image2prompt\image2prompt.exe`について、専用ウィンドウとアイコン、
+保存先を実装した。GitHub Actions run `30740190367`のWindows x64環境で、テスト、
+ビルド、exeと同梱モデルの検証まで成功した。Artifactsの
+`image2prompt-windows-x64`をWindows実機へ展開し、専用ウィンドウとアイコン、
 単一画像解析、フォルダー選択、終了後にプロセスが残らないことを確認する。
 Apple Silicon版はarm64環境で別途ビルド・検証する。
 複数画像の一括処理、進捗表示、CSV出力は引き続き保留する。
@@ -112,7 +112,7 @@ Finderの更新日順を比較する場合は、Finderの「グループ分け�
 - フォルダー内の全画像を一括解析する機能は後回しとする。
 - 解析設定は保存ボタンでユーザー別のJSONへ保存し、次回起動時に復元する。
 - 成人向けコンテンツ専用機能は初期版に含めない。
-- Windows対応とスタンドアロン化はMVP後に検討する。
+- Windows対応とスタンドアロン化はMVP後に着手し、exe生成まで完了した。
 
 ## 再開時点の注意事項
 

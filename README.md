@@ -274,6 +274,9 @@ powershell -ExecutionPolicy Bypass -File .\packaging\build_windows.ps1
 GitHubではActionsの「Build Windows standalone」を手動実行すると、同じビルドを
 Windows runner上で行います。成功後、runのArtifactsから
 `image2prompt-windows-x64`をダウンロードできます。成果物の保存期間は14日です。
+Windows x64での初回ビルドは
+[Actions run 30740190367](https://github.com/uyam99/image2prompt/actions/runs/30740190367)
+で成功しました。実際の専用ウィンドウ起動と画像解析はWindows実機で確認します。
 
 ## 次のマイルストーン
 
@@ -286,7 +289,7 @@ Windows runner上で行います。成功後、runのArtifactsから
 7. 忠実度優先プロンプト生成：完了
 8. 複数画像の一括処理、進捗表示、CSV出力：保留
 9. Intel Mac用スタンドアロン版：専用ウィンドウ・専用アイコンで実機確認完了
-10. Windows用スタンドアロン版：ビルド手順・OS分岐実装完了、実機確認待ち
+10. Windows用スタンドアロン版：GitHub Actionsでexe生成完了、実機起動確認待ち
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 
