@@ -20,6 +20,7 @@ from .faithful_prompt import (
     ENVIRONMENT_PRESETS,
 )
 from .image_processing import ImageInputError, prepare_image
+from .natural_prompt import compose_prompt, generate_florence_layers
 
 IMAGE_SUFFIXES = frozenset(
     {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
@@ -377,12 +378,64 @@ def run_analysis(
     )
 
 
+def run_natural_analysis(
+    image_path: str | None,
+    selected_folder_image: str | None,
+    environment_preset: str,
+) -> tuple[str, str, str, str, str, str, str]:
+    source_path = selected_folder_image or image_path
+    if not source_path:
+        raise gr.Error("画像を選択してください。")
+    try:
+        content, style, seconds = generate_florence_layers(Path(source_path))
+    except (
+        FileNotFoundError,
+        OSError,
+        RuntimeError,
+        subprocess.SubprocessError,
+        ValueError,
+    ) as error:
+        raise gr.Error(f"自然言語版を生成できませんでした：{error}") from error
+    wd = ""
+    camera = ENVIRONMENT_PRESETS[environment_preset]
+    prompt = compose_prompt(content, style, wd, camera)
+    return (
+        content,
+        style,
+        wd,
+        camera,
+        prompt,
+        token_status(prompt),
+        f"自然言語版を生成しました：{seconds:.2f}秒",
+    )
+
+
+def update_natural_prompt(
+    content: str,
+    style: str,
+    wd: str,
+    camera: str,
+) -> tuple[str, str]:
+    prompt = compose_prompt(content, style, wd, camera)
+    return prompt, token_status(prompt)
+
+
+def set_wd_supplement(
+    faithful: str,
+    content: str,
+    style: str,
+    camera: str,
+) -> tuple[str, str, str]:
+    prompt = compose_prompt(content, style, faithful, camera)
+    return faithful, prompt, token_status(prompt)
+
+
 def build_app() -> gr.Blocks:
     saved_settings = load_settings()
     with gr.Blocks(title="image2prompt") as app:
         gr.Markdown(
             "# image2prompt\n"
-            "画像から忠実度優先形式とDanbooruタグ形式の"
+            "画像から忠実度優先形式、Danbooruタグ形式、自然言語形式の"
             "プロンプトを生成します。"
         )
         folder_path = gr.State("")
@@ -476,8 +529,15 @@ def build_app() -> gr.Blocks:
                     height=520,
                 )
             with gr.Column(scale=2):
-                run_button = gr.Button("解析する", variant="primary")
+                run_button = gr.Button("忠実度優先で解析", variant="primary")
                 status = gr.Markdown()
+                natural_button = gr.Button("自然言語を生成", variant="secondary")
+                natural_status = gr.Markdown(
+                    "初回のみ、推論環境と約3.4GBのモデルをダウンロードします。"
+                )
+
+        with gr.Tabs():
+            with gr.Tab("忠実度優先"):
                 faithful_output = gr.Textbox(
                     label="忠実度優先形式",
                     info="信頼度0.50以上のWDタグを整理し、推測を加えず文章化します。",
@@ -485,12 +545,52 @@ def build_app() -> gr.Blocks:
                     show_copy_button=True,
                 )
                 faithful_tokens = gr.Markdown(token_status(""))
-                danbooru_output = gr.Textbox(
-                    label="Danbooruタグ形式",
-                    lines=6,
+                with gr.Accordion("Danbooruタグ形式", open=False):
+                    danbooru_output = gr.Textbox(
+                        label="Danbooruタグ形式",
+                        lines=6,
+                        show_copy_button=True,
+                    )
+                    danbooru_tokens = gr.Markdown(token_status(""))
+            with gr.Tab("自然言語（Florence）"):
+                gr.Markdown(
+                    "Florenceの画像説明を主文として生成します。必要な場合だけ、"
+                    "画風、WD補足、撮影・環境設定を編集できます。"
+                )
+                natural_final = gr.Textbox(
+                    label="最終プロンプト",
+                    lines=10,
                     show_copy_button=True,
                 )
-                danbooru_tokens = gr.Markdown(token_status(""))
+                natural_tokens = gr.Markdown(token_status(""))
+                with gr.Accordion("詳細編集", open=False):
+                    natural_content = gr.Textbox(
+                        label="本体プロンプト（Florence）",
+                        lines=8,
+                        show_copy_button=True,
+                    )
+                    with gr.Row():
+                        natural_style = gr.Textbox(
+                            label="画風（任意）",
+                            info="Florenceの画風判定を初期値にします。",
+                            lines=3,
+                        )
+                        natural_camera = gr.Textbox(
+                            label="撮影・環境設定（任意）",
+                            info="解析設定で選んだプリセットを初期値にします。",
+                            lines=3,
+                        )
+                    natural_wd = gr.Textbox(
+                        label="WD補足（任意）",
+                        info="初期状態は空です。必要な場合だけ追加してください。",
+                        lines=5,
+                    )
+                    with gr.Row():
+                        use_wd_button = gr.Button(
+                            "忠実度優先文をWD補足へ使用",
+                            size="sm",
+                        )
+                        clear_wd_button = gr.Button("WD補足を外す", size="sm")
         run_button.click(
             fn=run_analysis,
             inputs=[
@@ -507,6 +607,57 @@ def build_app() -> gr.Blocks:
                 danbooru_tokens,
                 status,
             ],
+        )
+        natural_button.click(
+            fn=run_natural_analysis,
+            inputs=[image, selected_folder_image, environment_preset],
+            outputs=[
+                natural_content,
+                natural_style,
+                natural_wd,
+                natural_camera,
+                natural_final,
+                natural_tokens,
+                natural_status,
+            ],
+            concurrency_limit=1,
+        )
+        for component in (
+            natural_content,
+            natural_style,
+            natural_wd,
+            natural_camera,
+        ):
+            component.change(
+                fn=update_natural_prompt,
+                inputs=[
+                    natural_content,
+                    natural_style,
+                    natural_wd,
+                    natural_camera,
+                ],
+                outputs=[natural_final, natural_tokens],
+                show_progress="hidden",
+            )
+        use_wd_button.click(
+            fn=set_wd_supplement,
+            inputs=[
+                faithful_output,
+                natural_content,
+                natural_style,
+                natural_camera,
+            ],
+            outputs=[natural_wd, natural_final, natural_tokens],
+            show_progress="hidden",
+        )
+        clear_wd_button.click(
+            fn=lambda content, style, camera: (
+                "",
+                *update_natural_prompt(content, style, "", camera),
+            ),
+            inputs=[natural_content, natural_style, natural_camera],
+            outputs=[natural_wd, natural_final, natural_tokens],
+            show_progress="hidden",
         )
         save_settings_button.click(
             fn=save_settings,

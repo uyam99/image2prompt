@@ -5,6 +5,7 @@ cd "${0:A:h}/.."
 
 model_dir="models/wd-swinv2-tagger-v3"
 icon_path="packaging/assets/image2prompt.icns"
+uv_path="${IMAGE2PROMPT_UV:-$(command -v uv)}"
 for file in model.onnx selected_tags.csv; do
     [[ -f "$model_dir/$file" ]] || {
         print -u2 "Missing $model_dir/$file"
@@ -13,6 +14,10 @@ for file in model.onnx selected_tags.csv; do
 done
 [[ -f "$icon_path" ]] || {
     print -u2 "Missing $icon_path"
+    exit 1
+}
+[[ -f "${uv_path:A}" ]] || {
+    print -u2 "Missing uv executable"
     exit 1
 }
 
@@ -38,6 +43,8 @@ UV_CACHE_DIR=.cache/uv uv run \
     --collect-data safehttpx \
     --collect-data groovy \
     --add-data "$model_dir:$model_dir" \
+    --add-data "image2prompt/florence_runner.py:image2prompt" \
+    --add-binary "${uv_path:A}:bin" \
     packaging/desktop_entry.py
 
 print "Built dist/image2prompt.app"

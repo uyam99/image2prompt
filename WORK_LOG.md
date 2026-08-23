@@ -1187,3 +1187,369 @@ uv run image2prompt-web
 - 終了時検証はunittest 25件、pytest 26件＋subtest 6件、Ruff、
   `git diff --check`に成功した。
 - 作業記録と再開ポイントをコミットして`main`へpushし、作業ツリーを閉じる。
+
+## 2026-08-08：大容量モデルを含むプロンプト比較の開始
+
+- ユーザーからWindows x64版とApple Silicon arm64版の実機確認完了を確認した。
+- モデル容量を今回の評価条件から外し、Hugging Face上の候補比較を開始した。
+- `SmilingWolf/wd-eva02-large-tagger-v3`のONNXとタグ表を固定リビジョンで取得した。
+- Intel MacのONNX Runtime 1.20.1／CPUで、448px入力と10,861タグを正常に読み込んだ。
+- 既存の任意`--model-dir`経路でモデル名がSwinV2へ固定表示されていたため、
+  SwinV2とEVA02-Largeのモデル名・リビジョンを正しく出力するよう修正した。
+- 採用アイコンでの試行はSwinV2が約0.70秒、EVA02-Largeが約2.39秒だった。
+- EVA02-Largeは色や発光を多く拾ったが、`food_focus`など誤検出候補も増えた。
+- `MiaoshouAI/Florence-2-base-PromptGen-v2.0`を固定リビジョンで取得し、
+  PyTorch等を本番依存へ追加しないPEP 723開発用CLIを`experiments/promptgen.py`へ追加した。
+- Intel Mac CPUで`<GENERATE_TAGS>`と`<CAPTION>`の推論に成功した。
+- アイコンの1行キャプションは概ね正しかったが、タグ形式は存在しない`1girl`と
+  `looking at viewer`を追加したため、現時点では既定経路へ採用しない。
+- 候補モデル、PyTorch隔離環境、Hugging FaceキャッシュはGit対象外に維持した。
+- unittest 26件、pytest 27件＋subtest 6件、Ruff、`git diff --check`に成功した。
+- 次は代表画像3～10枚で、しきい値別の誤検出と欠落を比較する。
+
+### prompt-imageフォルダーでの比較結果
+
+- `/Volumes/SSD1TB/StableDiffusion/prompt-image`直下の66画像がすべて読込可能だった。
+- SwinV2とEVA02-Largeを全66枚、0.30～0.70の5しきい値で比較した。
+- SwinV2は合計58.58秒、平均0.739秒。EVA02-Largeは合計189.01秒、平均2.671秒。
+- 0.50での平均採用タグ数はSwinV2が19.5、EVA02-Largeが26.0だった。
+- EVA02-Largeは約0.65で、現行SwinV2 0.50と同程度のタグ数になった。
+- EVA02は自動販売機の缶や猫画像の家具などを補った一方、窓辺画像へ存在しない
+  `food`と`fruit`を追加した。既定モデルの置き換えは行わない。
+- PromptGenは代表10枚でタグと1行キャプションを生成し、合計92.26秒だった。
+- 1行キャプションは8枚で概ね正しく、2枚で姿勢・場所の小さな誤認があった。
+- PromptGenタグは肯定・否定タグの矛盾や事実追加があり、候補から外す。
+- 比較JSONと初回判断を`outputs/`へ保存した。元画像は変更していない。
+- 次はComfyUIでSwinV2 0.50とEVA02-Large 0.65の生成結果を比較する。
+
+### A＋Caption関係文による自然言語構成
+
+- 窓辺、猫、自動販売機の3画像をComfyUIで比較し、SwinV2由来のA形式が
+  全体の解釈として最も安定することを確認した。
+- 自動販売機では、PromptGen Captionの`pointing at drinks`を使ったC形式が
+  人物と物体の関係を最もよく再現した。
+- Aを事実本文、Captionを動作・物体関係の短い補足、Danbooru自然言語を詳細、
+  環境設定を末尾とする構成で再生成し、3画像とも元画像に近い結果を得た。
+- この形式は完成画像の固定指示ではなく、利用者が編集するプロンプトの下地として
+  自然言語版へ採用する方針とした。モデル固有の手指などの揺れは固定しない。
+- 全文統合の比較用に`Qwen/Qwen2.5-1.5B-Instruct`を固定リビジョン
+  `989aa7980e4cf806f80c7fef2b1adb7bc71aa306`で取得した。容量は約2.9GBで、
+  `models/`内の実験用とし、配布依存には追加していない。
+- 1.5Bモデルへ全文を書き直させる方式は、年齢、髪型、`dog bed`などの事実追加が
+  発生したため不採用とした。
+- `experiments/merge_prompt.py`を追加し、モデルにはCaptionから最大1つの関係句だけを
+  抽出させ、本文と詳細の構成は既存Aから決定的に生成する方式へ変更した。
+- 3画像では窓辺が関係句なし、猫が`holding a black cat`、自動販売機が
+  `pointing at drinks`となり、誤った姿勢と物体を追加しなかった。
+  Intel Mac CPUでの合計は約10.09秒。
+- 結果は`outputs/prompt-image-hybrid-comparison.json`へ保存した。モデル、出力、
+  PEP 723依存環境は引き続きGit追跡対象外とする。
+- unittest 26件、Ruff、`git diff --check`に成功した。
+
+### Intel Mac検証環境の準備
+
+- 実機はmacOS 26.5.2、`x86_64`であることを確認した。
+- PEP 723環境のPython実行ファイルはMach-O x86_64、PyTorch 2.2.2、
+  `torch.backends.mps.is_available() == False`で、Intel CPUを10スレッド使用する。
+- PyTorch 2.2.2との互換性のため、統合実験スクリプトへ`numpy<2`を固定した。
+- Qwen2.5-1.5Bモデル約2.9GBと必要ファイルが`models/qwen2.5-1.5b-instruct`に
+  配置済みで、PEP 723依存環境もプロジェクト内キャッシュへ構築済み。
+- 自動販売機1枚のIntel CPUスモークテストは約4.05秒で成功し、関係句は
+  `pointing at drinks`、最終プロンプトも前回と同一構成になった。
+- `UV_OFFLINE=1`でも約4.10秒で再成功し、追加ダウンロードが不要なことを確認した。
+- スモークテスト結果は`outputs/prompt-image-hybrid-intel-smoke.json`へ保存した。
+
+### Intel Macアプリへ自然言語実験を追加
+
+- Web UIへ通常解析とは分離した「自然言語版を生成（実験）」ボタンと、コピー可能な
+  「自然言語形式（実験）」出力欄を追加した。
+- ボタンは選択画像をWD SwinV2で解析し、既存のA形式と採用タグをプロジェクト内の
+  `experiments/hybrid_image.py`へ渡す。
+- `hybrid_image.py`は同じ画像からPromptGen Captionを生成し、Qwen2.5-1.5Bで
+  関係句だけを抽出してA形式へ追加する。Caption全文による書き直しは行わない。
+- Finder起動したバンドルからプロジェクトルート、`/usr/local/bin/uv`、PEP 723環境、
+  Hugging Face動的モジュールキャッシュを検出できるようにした。
+- この経路は指定の`dist/image2prompt.app`をプロジェクト内に置いたまま使う
+  Intel Mac評価専用で、実験モデルとPyTorchは`.app`へ同梱していない。
+- Intel x86_64版を同じパスへ再ビルドした。容量は約803MB、同梱WDモデルを確認し、
+  `codesign --verify --deep --strict`に成功した。
+- 再ビルド版を起動し、ローカルUIに実験ボタンと出力欄があることを確認した。
+- 自動販売機画像を`.app`のGradio APIから実行し、約15.43秒で
+  `pointing at drinks`を補足した最終プロンプトが返ることを確認した。
+- 検証終了後、アプリを終了し、TCP 7860／7861の待受が残らないことを確認した。
+- unittest 27件、Ruff、`git diff --check`に成功した。
+
+### 今回の作業区切り
+
+- 自然言語版は、A形式を本文、PromptGen Captionから抽出した動作・物体関係を
+  最大1句の補足、Danbooru由来の自然言語を詳細とする実験構成で区切った。
+- Intel Mac評価用の`dist/image2prompt.app`は指定パスで起動・画像解析できる状態にした。
+  実験モデルは同梱していないため、評価中はアプリをプロジェクト内から移動しない。
+- 次回はユーザーによる実画像での起動、画像選択、自然言語生成、処理時間、終了動作の
+  結果を最初に確認する。不具合があれば該当経路だけを修正する。
+- 実機評価が良好と確認できるまでは、配布版への統合や追加機能へ進まない。
+- 変更は未コミットで、`main`は`origin/main`と同じ`e7849e8`を指している。
+- 未コミット対象は`WORK_LOG.md`、`NEXT_RESUME_POINT.md`、UI、WD Tagger、
+  デスクトップ起動処理、関連テスト、`experiments/`である。モデルと生成結果はGit対象外。
+- 終了時にunittest 27件、Ruff、`git diff --check`、x86_64形式、コード署名を再確認し、
+  TCP 7860／7861に待受が残っていないことを確認した。
+
+## 2026-08-12：自然言語実験の不採用
+
+- ユーザーがIntel Macで複数パターンを検証し、実験版の最終プロンプトが
+  既存の忠実度優先形式と実質的に同じ内容になることを確認した。
+- 原因は、既存の忠実度優先文をそのまま土台にし、PromptGen Captionから
+  最大1つの関係句だけを追加する構造だった。関係句がない場合は完全に同一になる。
+- 別の自然言語生成として改善がないため、この実験経路は不採用とした。
+- Web UIから「自然言語版を生成（実験）」ボタンと出力欄、生成処理を削除した。
+- デスクトップ起動時の外部実験環境探索と専用テストも削除した。
+- `experiments/merge_prompt.py`と`experiments/hybrid_image.py`は比較記録として残したが、
+  Web UIとスタンドアロンアプリからは参照しない。
+- 新しい生成モデルや依存パッケージは追加せず、SwinV2＋忠実度0.50を既定に維持した。
+- unittest 26件、Ruff、`git diff --check`に成功した。
+- Intel Mac版`dist/image2prompt.app`を再ビルドした。実行ファイルはx86_64、容量は約803MBで、
+  WDモデルとタグ表の同梱、`codesign --verify --deep --strict`の成功を確認した。
+- 再ビルド版を実起動し、UIに忠実度優先形式とDanbooruタグ形式だけが表示され、
+  自然言語実験のボタンとAPIが消えたことを確認した。
+- `outputs/verification.png`を同梱モデルで解析し、忠実度優先文とDanbooruタグを
+  2.77秒で出力した。アプリは終了コード0で閉じ、TCP 7860／7861に待受が残らなかった。
+
+## 2026-08-12：自然言語エンジンの再選定
+
+- 既存の忠実度優先文へ関係句だけを足す方式は使わず、画像から独立した自然言語を
+  生成できることを必須条件として候補選定からやり直した。
+- 評価条件は、既存文と明確に異なること、画像にない物体・状態・関係を追加しないこと、
+  Intel Mac CPUで動くこと、将来Windows／Apple Siliconへ移植可能なこととした。
+- Hugging Faceの公式モデルカードと固定リビジョンを確認し、SmolVLM 500M、
+  Florence-2-large PromptGen v2.0、Moondream2、JoyCaption Beta Oneを比較した。
+- SmolVLM 500M ONNXは約1.4～5.7秒だったが、髪型、衣服、家具、ブランド文字を
+  誤認した。推測禁止を強めると短すぎる文か誤った動作の断定になり、不採用とした。
+- Florence-2-large PromptGen v2.0を固定リビジョン
+  `4aa33eaf50aab040fe8523312ff52eb53322c220`で取得した。
+- Florence-largeの詳細、より詳細、混合モードは、年齢、人種、国籍、雰囲気、
+  矛盾タグを追加したため不採用とした。
+- Florence-largeの`<CAPTION>`だけは、写真、アニメ、成人向けを含む代表5枚で主要な
+  被写体・場所・関係を5枚とも保持し、1枚約8.6～12.2秒だった。
+- Moondream2を固定リビジョン
+  `6b714b26eea5cbd9f31e4edb2541c170afa935ba`で取得したが、Intel CPUでは最初の
+  画像エンコードだけで7分を超えたため、内容生成前に実用外と判定した。
+- JoyCaption Beta OneはQ4_K_M約4.9GBとmmproj約878MBを固定リビジョンで取得し、
+  llama.cpp 10360のIntel CPU版で実行した。
+- JoyCaptionの推測禁止文は販売機画像では関係と構図を詳しく保持したが、猫画像の
+  ピンク髪を白髪、場所をベッドと誤認し、窓画像へ年齢、時間帯、雰囲気を追加した。
+  1枚約63.7～70.0秒でもあるため不採用とした。
+- 暫定候補はFlorence-largeの一文`<CAPTION>`とする。既存の忠実度優先文へ結合せず、
+  独立した比較出力として扱う。Web UIとスタンドアロンアプリはまだ変更していない。
+- 比較用に`experiments/promptgen.py`を拡張し、`experiments/moondream_caption.py`と
+  `experiments/joycaption_gguf.py`を追加した。モデルと比較JSONはGit対象外のままとした。
+- unittest 26件、Ruff、`git diff --check`に成功した。
+- 次は代表3画像をComfyUIで、既存の忠実度優先形式とFlorence-largeの一文を別々に
+  使用して生成比較する。再現性が改善した場合だけ実験UIと配布方式を検討する。
+
+## 2026-08-12：ComfyUI実生成比較
+
+- ユーザー環境のComfyUI 0.32.0（Apple Silicon MPS、24GB）へAPI接続し、
+  Krea-2 Turboで既存の忠実度優先形式とFlorence-large `<CAPTION>`を比較した。
+- 元PNGに埋め込まれたワークフローを再利用し、各組でseed、解像度、step数を固定した。
+  比較を汚さないよう、プロンプト強化とLoRAは無効にした。
+- AppleSilicon-FP8拡張がmacOS 26.5.2でビルドできず低速な代替経路へ入ったため、
+  初回は4 steps、約0.44～0.50MPのスクリーニング条件へ縮小した。
+- `experiments/prepare_comfy_comparison.py`を追加し、6件のAPI payloadとmanifestを
+  `outputs/comfy-florence-comparison/`へ生成した。生成物はGit追跡対象外である。
+- 6件はすべて成功した。各生成は約49～101秒で、元画像と生成結果を目視比較した。
+- 窓画像ではFlorence版が、窓を見る人物、白い寝間着、写真調を再現した。
+  忠実度優先版は`ass`、`panties`などの個別タグに強く引かれ、アニメ調の背面構図へ逸れた。
+- 猫画像ではFlorence版が白い敷物とチェック柄スカートまで再現し、忠実度優先版より
+  元画像の構図へ近づいた。ただし両版とも猫へ手を添える関係は再現できなかった。
+- 自動販売機画像ではFlorence版だけが人物の指差しと販売機の近接関係を再現した。
+  一方、写真調、背面構図、プールを落とし、アニメ調の正面構図へ変わった。
+- 最も差が明確な窓画像を同一seed、768x576、8 stepsで再確認した。
+  Florence版は窓・視線・白い寝間着・写真調を再現し、4-step時の優位を維持した。
+  忠実度優先版は8 stepsでもアニメ調の背面強調へ逸れた。
+- Florence-largeの一文は、以前の関係句追加方式と異なり、画像生成結果を実際に変え、
+  物体関係と全体構図を改善する場合があることを確認した。ただし3画像すべてで
+  元画像の関係・構図・画風を同時に保持したわけではないため、既定形式にはしない。
+- Web UIとスタンドアロンアプリは変更していない。次の判断は、独立した実験出力として
+  Florence一文を追加するか、代表画像を増やして比較を続けるかである。
+
+### Florence主文＋WD補足、1024x1024比較
+
+- Florenceの一文を主文として残し、WD 0.50のうち重複・矛盾しない外観、衣装、場所、
+  視点、画風を自然文で補足する構成へ変更した。以前のWD本文＋関係句方式は再利用していない。
+- 自動統合の実装前に構成の有効性だけを調べるため、3画像の補足文を制御して作成した。
+  使用文は`outputs/comfy-florence-wd-1024/combined-prompts.json`へ保存した。
+- `experiments/prepare_comfy_comparison.py`へ任意のcombined入力を追加し、比較サイズを
+  1024x1024へ統一した。本体Web UIと配布アプリは変更していない。
+- Krea-2 Turbo、同一seed、CFG 1.0、Euler/simple、Prompt EnhanceとLoRA無効で、
+  Florence単独3件とWD補足3件を4 steps生成した。全6件が成功し、1件約110～132秒だった。
+- 窓画像の補足版は黒髪、前傾姿勢、透けた寝間着を反映したが、元画像のカーテンへ
+  添えた手を失った。属性補足は効いたが、物体関係の解釈不足は残った。
+- 猫画像の補足版は短髪、ピンクの目、白いニーソ、室内を反映したが、猫を見る関係を
+  補足から外したため正面視線へ変わった。関係タグも矛盾しない範囲で補足対象に必要である。
+- 自動販売機画像の補足版は、Florence単独版が落とした背面構図、振り返り、プール、
+  濡れ、黒髪を回復し、指差しも維持した。3画像中で最も元画像の関係と構図へ近づいた。
+- 自動販売機ペアだけ1024x1024、8 stepsで再確認した。Florence単独版は233.94秒、
+  WD補足版は199.89秒で成功し、補足版の背面構図、プール、振り返り、指差しの優位は維持された。
+- `realistic`を明記しても全生成がアニメ調になったため、画風の差はKrea-2 Turbo側の
+  影響が強い。今回の比較は関係と構図の評価に使い、写真調の再現性は別モデルで確認する必要がある。
+- 結論として、Florence主文＋WD補足はFlorence単独より情報保持を改善できる。
+  ただし外観・場所だけでなく、Florenceが落とした関係タグも補足し、矛盾時はFlorenceを
+  優先する統合規則が必要である。現時点では制御文での仮説検証であり、自動統合は未実装である。
+
+### Florence 90%主体＋WD最小補足の再比較
+
+- 前回の統合文は文章上Florenceを先頭に置いても情報量の大半がWDだったため、採用判断から外した。
+- Florence-largeの`<CAPTION>`と`<DETAILED_CAPTION>`だけから約50～55語の主文を作り、
+  年齢の数値、人種・国籍、雰囲気、品質、透かしなどの推測を除いた制御文を3画像分作成した。
+- WDは主文生成に使わず、Florenceが落とした高確度情報を猫と自販機へ最大2項目だけ追加した。
+  窓画像はFlorenceだけで必要情報が揃ったためWD補足をゼロとした。
+- Krea-2 Turbo、1024x1024、4 steps、同一seed、CFG 1.0、Euler/simple、
+  Prompt EnhanceとLoRA無効で7件を生成した。全件成功し、1件約119～180秒だった。
+- 窓のFlorence単独版は黒髪、青白ストライプの寝間着、カーテン、木枠、室内写真を再現し、
+  WDなしで主文として成立した。ただし年齢表現を全削除したため人物が元画像より年上になった。
+  正確な年齢断定は除きつつ、`young adult`程度の視覚属性は残す必要がある。
+- 猫のFlorence単独版は白い敷物、ソファ、テーブル、チェック柄、黒猫との視線関係を再現した。
+  WDの`pink_eyes`と`white_thighhighs`を追加した版では、その2属性だけを回復し、
+  主文・関係・背景は維持された。WDが局所補足として機能した成功例である。
+- 自動販売機のFlorence単独版は、以前の短いCAPTION版と異なり、写真調、青白チェックの水着、
+  自販機、プール、商品を指す動作を再現した。短文時のアニメ化は主文の情報密度不足も原因だった。
+- 自販機へ`from_behind`と`wet`を同時に足すと背面構図と濡れは回復したが、全体がアニメ調へ変化した。
+  それぞれ1項目だけの追加では、Florenceの写真調・背景・指差しを維持したまま対象属性だけを回復した。
+- Krea-2 Turboは少数語の組合せにも非線形に反応するため、WD補足は原則1項目とし、
+  2項目目を追加する場合は変化を再評価するのが安全である。
+- 今回の方針では、画像の主要情報はFlorenceだけで成立し、WDは局所補足に限定できた。
+  次は詳細Florence出力から推測を決定的に除く処理と、WD重大欠落を最大1項目選ぶ処理を
+  実験CLIとして自動化する。本体UIや配布版にはまだ追加しない。
+
+### Florence主体の編集可能な実験UI
+
+- ユーザー判断により、自然言語の基本出力をFlorence詳細文だけで成立させ、画風、
+  WD補足、撮影・環境設定を独立した任意レイヤーとして扱う方針に変更した。
+- `image2prompt/natural_prompt.py`を追加した。Florence-large PromptGen v2.0の
+  `<CAPTION>`と`<DETAILED_CAPTION>`を隔離されたPEP 723実験環境で実行する。
+- 短いCAPTIONは指差しなどの主要関係、詳細CAPTIONは衣装、物体、背景、照明を担当する。
+  詳細文から画風接頭辞を分離し、正確な年齢、人種・国籍、雰囲気、品質、透かしの
+  推測文を決定的に除く。若い外見は`young adult`として残す。
+- Web UIへ通常解析と分離した「自然言語形式（実験）」を追加した。構成は編集可能な
+  「本体プロンプト（Florence）」「画風」「WD補足」「撮影・環境設定」と、読み取り専用の
+  「結合後の最終プロンプト」である。各欄の変更は最終文と概算トークン数へ即時反映される。
+- WD補足は生成時に必ず空欄とする。既存の忠実度優先形式を使いたい場合だけ、ボタンで
+  WD補足欄へコピーでき、コピー後も自由に編集・削除できる。重複はユーザー判断を優先し、
+  自動削除やFlorence本文の書き直しを行わない。
+- 撮影・環境設定は既存の環境プリセットを初期値にする。画風もFlorence判定を初期値にするが、
+  どちらもユーザーが自由に変更・削除できる。
+- Florence-large約3.4GB、PyTorch、実験依存は本体依存や配布アプリへ同梱していない。
+  プロジェクト内の`experiments/promptgen.py`、モデル、uv環境がある場合だけ動く実験経路である。
+- 自動販売機の実画像で約68.18秒。指差し、水着柄、販売機内の商品、プール、照明を含む
+  Florence主体文を生成し、画風を`photorealistic photograph`へ分離できた。
+- Gradioを127.0.0.1:8765で実起動し、APIに自然言語生成、4層編集、WDコピーが公開されること、
+  実画面で編集内容が最終プロンプトとトークン数へ反映されることを確認した。
+- 検証後にサーバーを正常終了した。unittest 30件、Ruff、`git diff --check`に成功した。
+
+### Florence実験UIを含むIntel Macアプリ版
+
+- Intel x86_64版`dist/image2prompt.app`を再ビルドし、Florence主体の編集可能な
+  実験UIをアプリ内ウィンドウから利用できるようにした。
+- Florence-large本体とPyTorchは`.app`へ同梱していない。通常のWD解析だけなら
+  追加ダウンロードは発生せず、「自然言語版を生成（実験）」を初めて押した時だけ
+  推論環境とモデルをユーザー領域へ取得する。
+- モデルは`MiaoshouAI/Florence-2-large-PromptGen-v2.0`、リビジョン
+  `4aa33eaf50aab040fe8523312ff52eb53322c220`へ固定した。
+- 配布先にHomebrewや`uv`を要求しないよう、Intel x86_64版`uv 0.11.21`と
+  `experiments/promptgen.py`だけを`.app`へ同梱した。
+- 保存先は`~/Library/Application Support/image2prompt/`配下とし、モデルは
+  Hugging Faceキャッシュ、PEP 723依存はuvキャッシュへ保存する。
+- 初回取得はモデル約3.4GBに加えて推論環境も必要なため、処理待機上限を1時間とした。
+  UIにも初回ダウンロードが発生することを明記した。
+- 生成物は約854MB、アプリ本体と同梱uvはMach-O x86_64。Florenceの
+  `model.safetensors`とPyTorchが含まれないことを確認した。
+- `codesign --verify --deep --strict`に成功し、署名はローカル検証用adhocである。
+- 重複する3.4GBの再取得を避けるため、検証時だけ既存のローカルFlorenceモデルを
+  環境変数で指定した。`.app`内のuvと推論スクリプトから自動販売機画像を処理し、
+  WD補足が空のFlorence主文、`photorealistic photograph`へ分離した画風、
+  結合後の最終文を31.98秒で取得した。
+- 最終ビルドを実起動し、`/run_natural_analysis`が公開されることを確認した。
+  終了後はTCP 7860／7861の待受が残っていない。
+- unittest 31件、Ruff、`git diff --check`に成功した。
+- 変更は未コミットで、`main`は`origin/main`と同じ位置を指す。既存の未コミット変更を
+  保持したまま、`packaging/build_macos.sh`、自然言語処理、実験スクリプト、UI、テスト、
+  作業記録を更新した。モデル、キャッシュ、生成結果、`dist/`はGit追跡対象外である。
+
+### 今回の作業区切り
+
+- ユーザーがIntel版`dist/image2prompt.app`を複数画像で検証する段階へ移ったため、
+  今回の実装作業はここで区切る。
+- 次回はユーザーの実機結果を最初に確認する。特に初回ダウンロード、2回目以降の再利用、
+  Florence主文、画風分離、空のWD補足、編集反映、処理時間、終了動作を確認する。
+- 評価結果が出るまでは、自然言語実験を既定出力へ変更せず、Apple Silicon／Windows版への
+  展開、モデル同梱、ONNX変換、正式配布対応へ進まない。
+- 終了時点でunittest 31件、Ruff、`git diff --check`に成功した。
+- Intel版`.app`はx86_64、約854MB、adhoc署名済み。FlorenceモデルとPyTorchは非同梱で、
+  TCP 7860／7861の待受や検証用プロセスは残っていない。
+- 変更は未コミット。`main`のHEADは`origin/main`と同じ`e7849e8`で、既存の作業変更を
+  そのまま保持している。ユーザー確認なしにcommit、push、tag作成は行っていない。
+
+## 2026-08-23：自然言語形式の採用と3プラットフォーム展開準備
+
+### 採用方針
+
+- ユーザーがIntel版を継続利用し、自然言語形式を含めて概ね良好と確認した。
+- Florence自然言語形式を任意機能として採用し、Apple Silicon／Windowsへ展開する方針を確定した。
+- SwinV2＋忠実度0.50の忠実度優先形式は、引き続き既定・推奨出力として維持した。
+- Florenceモデル同梱、ONNX変換、MPS最適化、自動WD補足は今回の対象外とした。
+
+### UI整理
+
+- 画像入力と解析設定を忠実度優先／自然言語で共通化した。
+- 実行ボタンを「忠実度優先で解析」「自然言語を生成」へ分離した。
+- 結果を「忠実度優先」「自然言語（Florence）」の2タブへ整理した。
+- Danbooruタグ形式は忠実度優先タブ内の折りたたみ欄へ移した。
+- 自然言語タブはコピー対象の最終プロンプトを先に表示し、Florence本文、画風、
+  WD補足、撮影設定を「詳細編集」へまとめた。
+- WD補足は空から開始し、既存の忠実度優先文を任意で追加・解除できる動作を維持した。
+- Gradio標準のTabs、Accordion、Textbox、Markdownだけを使用し、独自CSS／JavaScriptや
+  新しいUI依存は追加していない。
+- Web UIを127.0.0.1:8765で実起動し、実画面、両タブ、詳細編集欄を確認した。
+- `Client.view_api()`で`/run_analysis`と`/run_natural_analysis`の引数と出力を確認した。
+
+### 製品ランタイム整理
+
+- `image2prompt/florence_runner.py`を追加し、製品経路から`experiments/`への依存を外した。
+- 製品ランナーは`<CAPTION>`と`<DETAILED_CAPTION>`だけを生成し、固定リビジョンと
+  隔離されたPEP 723依存環境を使用する。
+- Windowsではバンドル内`bin/uv.exe`、macOSでは`bin/uv`を検出するようにした。
+- subprocess失敗時は標準エラー末尾をUIへ返し、初回取得失敗の原因を確認できるようにした。
+- 不採用比較用の`experiments/`は削除せず保全したが、製品ランタイムは参照しない。
+
+### Apple Silicon／Windowsビルド準備
+
+- `packaging/build_macos.sh`へ製品Florenceランナーとビルド環境の`uv`同梱を追加した。
+- `packaging/build_windows.ps1`へ`uv.exe`検出、ランナー同梱、`uv.exe`同梱を追加した。
+- Apple Silicon workflowでランナー、arm64版`uv`、`uv --version`を検証するようにした。
+- Windows workflowでランナー、`uv.exe`、`uv --version`を検証するようにした。
+- 両workflowのYAML構文をローカルで確認した。実際の各OSビルドはGit反映後に実行する。
+
+### Intel版の実画像検証
+
+- Web UIから`outputs/verification.png`を新しい製品ランナーで処理し、71.40秒で成功した。
+- Intel x86_64版`dist/image2prompt.app`を再ビルドした。容量は約854MB。
+- アプリ本体と同梱`uv 0.11.21`がMach-O x86_64であることを確認した。
+- WDモデル、タグ表、`image2prompt/florence_runner.py`の同梱を確認した。
+- Florenceの`model.safetensors`とPyTorchが含まれていないことを確認した。
+- `codesign --verify --deep --strict`に成功した。署名はローカル検証用adhocである。
+- アプリを実起動し、`/run_natural_analysis`が公開されることを確認した。
+- バンドル内`uv`と製品ランナーから同じ実画像を29.55秒で処理し、Florence本文、
+  空のWD補足、撮影設定、最終プロンプトを取得した。
+- アプリ終了後にプロセスとTCP 7860／7861の待受が残らないことを確認した。
+
+### 作業区切り
+
+- unittest 32件、Ruff、`git diff --check`に成功した。
+- `README.md`、`image2prompt 作業計画.txt`、`NEXT_RESUME_POINT.md`を、
+  自然言語形式の採用とApple Silicon／Windows実機テストへ合わせて更新した。
+- 次は変更をGitへ反映し、GitHub Actionsから`image2prompt-macos-arm64`と
+  `image2prompt-windows-x64`を生成する。
+- 成果物生成後、ユーザーが各実機で通常解析、フォルダー選択、自然言語の初回取得、
+  再利用、編集反映、正常終了を確認する。
+- `main`と`origin/main`は`e7849e8`で一致し、今回までの変更は未コミット・未pushである。
+  ユーザー確認なしにcommit、push、tag作成、workflow実行は行っていない。

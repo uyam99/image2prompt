@@ -4,6 +4,11 @@ Set-Location (Split-Path -Parent $PSScriptRoot)
 
 $modelDir = "models/wd-swinv2-tagger-v3"
 $iconPath = "packaging/assets/image2prompt.ico"
+$uvPath = if ($env:IMAGE2PROMPT_UV) {
+    $env:IMAGE2PROMPT_UV
+} else {
+    (Get-Command uv -ErrorAction Stop).Source
+}
 foreach ($file in @("model.onnx", "selected_tags.csv")) {
     $path = Join-Path $modelDir $file
     if (-not (Test-Path $path -PathType Leaf)) {
@@ -12,6 +17,9 @@ foreach ($file in @("model.onnx", "selected_tags.csv")) {
 }
 if (-not (Test-Path $iconPath -PathType Leaf)) {
     throw "Missing $iconPath"
+}
+if (-not (Test-Path $uvPath -PathType Leaf)) {
+    throw "Missing uv executable: $uvPath"
 }
 
 $env:PYINSTALLER_CONFIG_DIR = ".cache/pyinstaller-windows"
@@ -33,6 +41,8 @@ $pyinstallerArgs = @(
     "--collect-data", "safehttpx",
     "--collect-data", "groovy",
     "--add-data", "${modelDir}:${modelDir}",
+    "--add-data", "image2prompt/florence_runner.py:image2prompt",
+    "--add-binary", "${uvPath}:bin",
     "packaging/desktop_entry.py"
 )
 

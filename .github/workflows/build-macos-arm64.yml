@@ -49,7 +49,11 @@ jobs:
           test -f dist/image2prompt.app/Contents/MacOS/image2prompt
           test -f dist/image2prompt.app/Contents/Resources/models/wd-swinv2-tagger-v3/model.onnx
           test -f dist/image2prompt.app/Contents/Resources/models/wd-swinv2-tagger-v3/selected_tags.csv
+          test -f dist/image2prompt.app/Contents/Resources/image2prompt/florence_runner.py
+          test -f dist/image2prompt.app/Contents/Frameworks/bin/uv
           file dist/image2prompt.app/Contents/MacOS/image2prompt | grep -q arm64
+          file dist/image2prompt.app/Contents/Frameworks/bin/uv | grep -q arm64
+          dist/image2prompt.app/Contents/Frameworks/bin/uv --version
           codesign --verify --deep --strict dist/image2prompt.app
 
       - name: Create distribution ZIP

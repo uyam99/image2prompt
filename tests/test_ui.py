@@ -19,8 +19,11 @@ from image2prompt.ui import (
     load_settings,
     refresh_folder,
     run_analysis,
+    run_natural_analysis,
     save_settings,
     select_folder_image,
+    set_wd_supplement,
+    update_natural_prompt,
 )
 
 
@@ -239,6 +242,40 @@ class UiTests(unittest.TestCase):
     def test_requires_an_image(self) -> None:
         with self.assertRaises(gr.Error):
             run_analysis(None, None, 0.35, 0.85, "none")
+
+    @patch(
+        "image2prompt.ui.generate_florence_layers",
+        return_value=("Florence content", "photo", 12.5),
+    )
+    def test_formats_editable_natural_layers(self, generate_mock) -> None:
+        content, style, wd, camera, prompt, tokens, status = (
+            run_natural_analysis(None, "source.jpg", "photo_portrait")
+        )
+
+        self.assertEqual(content, "Florence content")
+        self.assertEqual(style, "photo")
+        self.assertEqual(wd, "")
+        self.assertIn("85mm", camera)
+        self.assertEqual(prompt, f"Florence content\n\nphoto\n\n{camera}")
+        self.assertIn("12.50秒", status)
+        self.assertIn("512", tokens)
+        generate_mock.assert_called_once_with(Path("source.jpg"))
+
+    def test_updates_and_optionally_adds_wd_layer(self) -> None:
+        prompt, _ = update_natural_prompt("main", "style", "", "camera")
+        wd, combined, _ = set_wd_supplement(
+            "faithful facts",
+            "main",
+            "style",
+            "camera",
+        )
+
+        self.assertEqual(prompt, "main\n\nstyle\n\ncamera")
+        self.assertEqual(wd, "faithful facts")
+        self.assertEqual(
+            combined,
+            "main\n\nstyle\n\nfaithful facts\n\ncamera",
+        )
 
     def test_estimates_tokens_without_enforcing_the_reference(self) -> None:
         self.assertEqual(estimate_prompt_tokens(""), 0)

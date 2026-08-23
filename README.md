@@ -1,20 +1,25 @@
 # image2prompt
 
-画像を解析し、画像生成向けの次の3種類のプロンプトを生成できるローカル
-アプリです。Web UIでは混同を避けるため、自然言語は忠実度優先形式だけを
-表示します。
+画像を解析し、画像生成向けのプロンプトを生成できるローカルアプリです。
+Web UIでは同じ画像入力から、忠実度優先出力と任意のFlorence自然言語出力を
+別タブで生成・編集できます。
 
 - 忠実度優先形式
 - Danbooruタグ形式
-- SmolVLM自然言語形式（参考）
+- Florence自然言語形式（任意）
+
+SmolVLM自然言語形式とFlorence-2 ONNX詳細版は、開発・比較用CLIとして残しています。
 
 ## 現在の状態
 
 安定版：`v0.2.0`
 
+次版候補：`v0.3.0`（Florence自然言語形式の3プラットフォーム展開中）
+
 標準画像の前処理、WD SwinV2 Tagger v3によるDanbooruタグ抽出、
-タグを決定的に文章化する忠実度優先形式、SmolVLM-256Mによる自然言語
-プロンプト生成、単一画像Web UIを実装しています。
+タグを決定的に文章化する忠実度優先形式、Florence主体の編集可能な自然言語形式、
+単一画像とフォルダー選択に対応したWeb UIを実装しています。忠実度優先形式は
+引き続き既定・推奨出力です。
 
 GitHubリポジトリ（Private）：[uyam99/image2prompt](https://github.com/uyam99/image2prompt)
 
@@ -24,8 +29,9 @@ GitHubリポジトリ（Private）：[uyam99/image2prompt](https://github.com/uy
 - Intel Mac
 - Windows
 
-Intel Mac用スタンドアロン版は実機確認済みです。Windows版はビルド手順を
-実装済みで実機検証待ち、Apple Silicon版は対象環境でビルド・検証します。
+通常の忠実度優先機能は3環境で実機確認済みです。Florence自然言語形式は
+Intel Macで実機確認済みで、Apple Silicon版とWindows版は新しい配布成果物の
+実機確認待ちです。
 
 ## 開発方針
 
@@ -109,6 +115,29 @@ uv run image2prompt-faithful \
 `anime_cinematic`を選択できます。既定値は`none`で、解析結果へ定型文を
 追加しません。プリセットを選択した場合は手動指定を優先し、解析された画風と
 プリセットの画風が重複しないようにします。
+
+## Florence自然言語プロンプト（任意）
+
+`MiaoshouAI/Florence-2-large-PromptGen-v2.0`の`<CAPTION>`と
+`<DETAILED_CAPTION>`から自然言語本文を生成します。正確でない年齢・人種・国籍、
+雰囲気、品質、透かしなどの推測文を決定的な規則で除き、画風を別欄へ分離します。
+
+Web UIの「自然言語を生成」を押すと、次の内容を別々に編集できます。
+
+- Florence主体の本文
+- 画風
+- WD補足（初期状態は空）
+- 撮影・環境設定
+- 上記を結合した最終プロンプト
+
+初回実行時だけ、固定リビジョンのモデル約3.4GBと隔離されたPyTorch推論環境を
+ユーザー領域へダウンロードします。2回目以降は同じ環境を再利用します。
+Macでは`~/Library/Application Support/image2prompt/`、Windowsでは
+`%APPDATA%\image2prompt\`配下へ保存します。アプリ本体の通常解析には
+PyTorchを追加せず、モデルも配布物へ同梱しません。
+
+使用モデル：
+[MiaoshouAI/Florence-2-large-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v2.0)
 
 ## Florence-2詳細キャプション（開発・比較用）
 
@@ -202,10 +231,15 @@ uv run image2prompt-web
 ```
 
 表示された`http://127.0.0.1:7860`をブラウザーで開き、画像を選択して
-「解析する」を押します。一般タグとキャラクタータグのしきい値は、上部の
-「解析設定」を開くと変更できます。選択画像の右側では、自然言語を
-「忠実度優先形式」の1欄へ集約し、その下に
-Danbooruタグ形式を表示します。Web UIではSmolVLMを実行しません。
+「忠実度優先で解析」または「自然言語を生成」を押します。一般タグと
+キャラクタータグのしきい値は、上部の「解析設定」を開くと変更できます。
+画像入力と設定は両方式で共通です。
+
+結果は「忠実度優先」と「自然言語（Florence）」のタブに分かれます。
+忠実度優先タブではコピー用本文を先に表示し、Danbooruタグは折りたたみ欄へ
+表示します。自然言語タブではコピー用の最終プロンプトを先に表示し、Florence本文、
+画風、WD補足、撮影・環境設定は「詳細編集」から変更できます。Web UIでは
+SmolVLMを実行しません。
 「環境プリセット（任意）」からリアル人物、リアル・ストリート、
 リアル・風景・建築、アニメ・クリーン、アニメ・シネマティックを選べます。
 既定の「適用なし」は解析結果だけを使用します。
@@ -229,7 +263,7 @@ Mac版の保存先は
 作業中にフォルダーの内容を変更した場合は「再読み込み」で一覧を更新できます。
 選択中の画像が残っていれば、再読み込み後も選択を維持します。
 フォルダーのドラッグ＆ドロップには対応していません。サムネイルを1枚選択して
-から「解析する」を押すと、その画像だけを解析します。`.DS_Store`など画像以外
+してから目的の生成ボタンを押すと、その画像だけを解析します。`.DS_Store`など画像以外
 のファイルは自動的に除外します。
 フォルダー内の全画像を一括解析する機能はまだ実装していません。
 
@@ -243,8 +277,9 @@ zsh packaging/build_macos.sh
 
 生成先は`dist/image2prompt.app`です。ダブルクリックすると専用のアプリ内
 ウィンドウを開き、外部ブラウザーは使用しません。Python実行環境とWD Tagger
-モデルを同梱し、SmolVLMとFlorence-2は含めません。現在のIntel Mac実測サイズは
-約802MBです。専用アイコンは`packaging/assets/image2prompt.icns`を使用します。
+モデル、自然言語用の`uv`とFlorenceランナーを同梱します。Florenceモデルと
+PyTorchは含めません。現在のIntel Mac実測サイズは約854MBです。専用アイコンは
+`packaging/assets/image2prompt.icns`を使用します。
 
 現在はローカル検証用のadhoc署名です。他のMacへ配布する前に正式なコード署名と
 notarizationが必要です。Apple Silicon版はarm64環境で同じスクリプトを実行して
@@ -256,7 +291,8 @@ Apple Silicon runner上でarm64版を生成します。成功後、runのArtifac
 `image2prompt-macos-arm64`をダウンロードできます。成果物の保存期間は14日です。
 初回ビルドは
 [Actions run 30740705505](https://github.com/uyam99/image2prompt/actions/runs/30740705505)
-で成功しました。実際の起動と画像解析はApple Silicon実機で確認します。
+で通常解析版の生成と実機確認に成功しました。自然言語対応版は、CIで新しい成果物を
+生成した後、初回ダウンロード、再利用、生成、正常終了をApple Silicon実機で確認します。
 
 ## Windows用スタンドアロン版（試作）
 
@@ -269,8 +305,9 @@ powershell -ExecutionPolicy Bypass -File .\packaging\build_windows.ps1
 
 生成先は`dist\image2prompt\image2prompt.exe`です。配布時はexe単体ではなく、
 `dist\image2prompt`フォルダー全体を渡します。Python実行環境、WD Taggerモデル、
-専用アイコンを同梱し、外部ブラウザーを開かず専用ウィンドウで動作します。
-利用者側にPythonやuvは不要です。
+専用アイコン、`uv.exe`、Florenceランナーを同梱し、外部ブラウザーを開かず
+専用ウィンドウで動作します。利用者側にPythonやuvは不要です。Florenceモデルと
+PyTorchは初回の自然言語生成時にユーザー領域へ取得します。
 
 表示にはMicrosoft Edge WebView2 Runtimeを使用します。Windows 11には同梱され、
 大半のWindows 10環境にも導入済みですが、未導入環境では
@@ -283,7 +320,8 @@ Windows runner上で行います。成功後、runのArtifactsから
 `image2prompt-windows-x64`をダウンロードできます。成果物の保存期間は14日です。
 Windows x64での初回ビルドは
 [Actions run 30740190367](https://github.com/uyam99/image2prompt/actions/runs/30740190367)
-で成功しました。実際の専用ウィンドウ起動と画像解析はWindows実機で確認します。
+で通常解析版の生成と実機確認に成功しました。自然言語対応版は、CIで新しい成果物を
+生成した後、初回ダウンロード、再利用、生成、正常終了をWindows実機で確認します。
 
 ## 次のマイルストーン
 
@@ -291,13 +329,13 @@ Windows x64での初回ビルドは
 2. EXIF回転、RGB変換、縦横比を維持した画像前処理：完了
 3. WD Tagger候補のローカル推論：完了
 4. 単一画像Web UI：完了
-5. 自然言語モデル候補の比較：SmolVLM-256MをMVPへ採用
+5. 自然言語モデル候補の比較：Florence-2-large PromptGenを任意機能へ採用
 6. フォルダー内の画像一覧と単一選択：完了
 7. 忠実度優先プロンプト生成：完了
 8. 複数画像の一括処理、進捗表示、CSV出力：保留
 9. Intel Mac用スタンドアロン版：専用ウィンドウ・専用アイコンで実機確認完了
-10. Windows用スタンドアロン版：GitHub Actionsでexe生成完了、実機起動確認待ち
-11. Apple Silicon用スタンドアロン版：GitHub Actionsでarm64版生成完了、実機確認待ち
+10. Windows用スタンドアロン版：通常解析は実機確認完了、自然言語対応版は実機確認待ち
+11. Apple Silicon用スタンドアロン版：通常解析は実機確認完了、自然言語対応版は実機確認待ち
 
 詳細は[作業計画](./image2prompt%20作業計画.txt)を参照してください。
 

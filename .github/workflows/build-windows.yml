@@ -49,13 +49,16 @@ jobs:
           $required = @(
             "dist/image2prompt/image2prompt.exe",
             "dist/image2prompt/_internal/models/wd-swinv2-tagger-v3/model.onnx",
-            "dist/image2prompt/_internal/models/wd-swinv2-tagger-v3/selected_tags.csv"
+            "dist/image2prompt/_internal/models/wd-swinv2-tagger-v3/selected_tags.csv",
+            "dist/image2prompt/_internal/image2prompt/florence_runner.py",
+            "dist/image2prompt/_internal/bin/uv.exe"
           )
           foreach ($path in $required) {
             if (-not (Test-Path $path -PathType Leaf)) {
               throw "Missing bundled file: $path"
             }
           }
+          & "dist/image2prompt/_internal/bin/uv.exe" --version
 
       - name: Upload Windows bundle
         uses: actions/upload-artifact@v7
