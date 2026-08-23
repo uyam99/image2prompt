@@ -10,20 +10,23 @@
 
 ## 次回最初の作業
 
-自然言語対応版をGitへ反映し、GitHub ActionsでApple Silicon／Windows成果物を
-生成する。commit、push、workflow実行はユーザー確認後に行う。
+GitHub Actionsの成果物ストレージ使用量が再計算された後、Apple Silicon／Windowsの
+失敗runを再実行し、実機テスト用Artifactを取得する。旧Artifactは削除済みで、
+GitHubの案内上、容量反映には削除から6〜12時間かかる。
 
-対象workflow：
+対象run（commit `4ae1e34`）：
 
-- `Build macOS Apple Silicon standalone`
-- `Build Windows standalone`
+- Apple Silicon：`32625753202`
+- Windows：`32625753217`
 
 成果物：
 
 - `image2prompt-macos-arm64`
 - `image2prompt-windows-x64`
 
-Artifactsの保存期間は14日。生成後はユーザーが各実機で以下を確認する。
+両runはattempt 2まで、テスト、アプリ生成、バンドル検証に成功し、最後のArtifact
+アップロードだけ容量上限で失敗している。Artifactsの保存期間は14日。生成後は
+ユーザーが各実機で以下を確認する。
 
 ## Apple Silicon実機テスト
 
@@ -95,7 +98,8 @@ codesign --verify --deep --strict dist/image2prompt.app
 
 ## Git状態
 
-`main`と`origin/main`は`e7849e8`で一致している。自然言語UI、製品ランナー、
-macOS／Windowsビルド、workflow、テスト、文書は未コミットである。
-モデル、キャッシュ、生成結果、`dist/`はGit追跡対象外。ユーザー確認なしに
-commit、push、tag作成、workflow実行は行わない。
+`main`と`origin/main`は`4ae1e34`で一致している。自然言語UI、製品ランナー、
+macOS／Windowsビルド、workflow、テスト、文書はcommit・push済みである。
+`image2prompt/wd_tagger.py`、`tests/test_wd_tagger.py`、`experiments/`には比較研究用の
+未コミット差分があり、そのまま保全している。モデル、キャッシュ、生成結果、`dist/`は
+Git追跡対象外である。

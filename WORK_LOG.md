@@ -1553,3 +1553,17 @@ uv run image2prompt-web
   再利用、編集反映、正常終了を確認する。
 - `main`と`origin/main`は`e7849e8`で一致し、今回までの変更は未コミット・未pushである。
   ユーザー確認なしにcommit、push、tag作成、workflow実行は行っていない。
+
+## 2026-08-23：Apple Silicon／Windows CI実行
+
+- 製品対象の変更だけを`4ae1e34`（`feat: add cross-platform natural prompt workflow`）として
+  `main`へpushした。不採用比較用`experiments/`とWD比較の未コミット差分は含めていない。
+- Apple Silicon run `32625753202`、Windows run `32625753217`を実行した。
+- 両runでテスト、アプリ生成、バンドル検証まで成功した。失敗箇所は最後の
+  `actions/upload-artifact`だけで、GitHub Actions成果物ストレージ上限が原因だった。
+- ユーザー確認後、期限切れだった旧Apple Silicon成果物（ID `8831205883`、約492MB）と
+  旧Windows成果物（ID `8831026660`、約827MB）を削除した。現在のArtifact一覧は空である。
+- 両runをattempt 2として即時再実行したが、GitHub側の使用量再計算前だったため、
+  アップロードだけ同じ容量上限で失敗した。削除反映にはGitHubの案内上6〜12時間かかる。
+- 次は容量再計算後に上記2 runを再実行し、`image2prompt-macos-arm64`と
+  `image2prompt-windows-x64`のアップロード、ダウンロード、内容確認を行う。
