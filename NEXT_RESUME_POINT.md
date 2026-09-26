@@ -2,8 +2,9 @@
 
 更新日：2026-09-26
 
-Intel版のユーザー運用確認は完了。安定性対策の製品ソースはローカルcommit `a3d7887`に確定済み。
-次はGitHubへのpushとApple Silicon／Windowsビルドの実行。自動承認レビューにより明示承認待ち。
+Intel版のユーザー運用確認は完了。安定性対策`a3d7887`と文書`1f94ecc`はmainへpush済み。
+同一リビジョン`1f94ecc`からApple Silicon／Windowsの実機テスト用ビルドが成功。
+成果物のローカル取得・検証は完了。次はApple Silicon／Windowsでのユーザー実機評価から再開する。
 
 ## 作業ルート
 
@@ -29,13 +30,9 @@ Intel版のユーザー運用確認は完了。安定性対策の製品ソース
 
 ## 次に進める作業
 
-1. GitHub `uyam99/image2prompt`の`main`へのpushと、Apple Silicon／Windowsの
-   `workflow_dispatch`についてユーザーの明示承認を得る。実行を試みたが、自動承認レビューで
-   共有リモート変更・ソース送信・CI起動への明示承認が必要とされ、コマンド実行前に拒否された。
-2. 承認後に最新の`origin/main`を確認し、製品commit `a3d7887`と引き継ぎ文書をpushする。
-   両workflowを同じリビジョンで実行し、runのhead SHAを確認する。
-3. 成果物を取得してバンドル内容を確認し、各OSで起動・解析・画像選択・編集・終了の
-   ユーザー実機評価へ進む。旧runの単純な再実行は避ける。
+1. 下記の保存済みZIPを各OSへ渡し、起動・解析・画像選択・編集・終了を実機で確認する。
+2. Intelで改善した通常／自然言語の交互実行と、解析中の終了後に子プロセスが残らないかも確認する。
+3. 各OSの評価結果を確認してから正式配布を判断する。Intelの運用済みアプリはそのまま保持する。
 
 `a3d7887`は共通キュー、ログ、タイムアウト・終了処理、一時画像管理、WDのarena縮小を含む。
 `wd_tagger.py`の比較モデル識別、`tests/test_wd_tagger.py`、`experiments/`は含めていない。
@@ -50,35 +47,46 @@ Intelアプリの再ビルドは行っておらず、9月6日の運用済みア�
 `~/Library/Application Support/image2prompt/logs/image2prompt.log`（`.1`〜`.3`も含む）を
 照合する。ログの最大RSSは起動後の最高値であり、現在使用量ではない。
 
-## 保留中：Apple Silicon／Windows成果物の取得
+## Apple Silicon／Windowsのビルド
 
-9月26日にGitHubへ接続し、Artifact一覧0件、最新runが以下の8月23日の失敗runであることを
-確認した。新しいビルドは承認待ちで未実行。ストレージ上限の解消はまだ未確認。
-旧runには今回の安定性対策が含まれないため、更新版を配布する場合はビルド対象の
-リビジョンを確定してから実行する。
+ユーザーの明示承認を受け、9月26日にpushと両workflowの起動を実行した。
+共通head SHA：`1f94eccc708967f86626e3423544dd592d61a630`。
 
-対象run（commit `4ae1e34`）：
+- Apple Silicon：[run 36225283272](https://github.com/uyam99/image2prompt/actions/runs/36225283272)
+- Windows：[run 36225285096](https://github.com/uyam99/image2prompt/actions/runs/36225285096)
 
-- Apple Silicon：`32625753202`
-- Windows：`32625753217`
+両runともテスト・ビルド・バンドル検証・Artifactアップロードに成功。
+Apple Siliconはpytest 37件＋6 subtests、Windowsは36件＋6 subtests、POSIX専用1件スキップ。
+成果物名は`image2prompt-macos-arm64`と`image2prompt-windows-x64`。
+Artifact IDは順に`10900049530`、`10900371911`。保存期限は2026-10-10。
+前回の容量制限によるアップロード失敗は今回発生しなかった。
+8月23日のrun（32625753202／32625753217）は古いソースのため再実行しない。
 
-成果物：
+## 取得済みアプリと検証
 
-- `image2prompt-macos-arm64`
-- `image2prompt-windows-x64`
+保存先：`dist/test-builds/2026-09-26/`
 
-8月23日時点で両runはattempt 2まで、テスト、アプリ生成、バンドル検証に成功し、最後のArtifact
-アップロードだけ容量上限で失敗している。Artifactsの保存期間は14日。生成後は
-ユーザーが各実機で以下を確認する。
+- Apple Silicon：`image2prompt-macos-arm64.zip`（508,459,633 bytes、約508MB）
+- Windows x64：`image2prompt-windows-x64.zip`（869,485,238 bytes、約869MB）
+- `README.txt`：展開・起動・実機確認の手順。
+- `SHA256SUMS.txt`：上記配布ZIPのSHA-256。
+- `build-info.json`：ソースcommit、run ID、ファイルサイズとハッシュ。
 
-再開時の順序：
+両ArtifactのGitHubハッシュ一致と配布ZIP全件のCRCに成功。
+両方のWDモデル・タグCSV・Florenceランナー・uvの存在、アプリ本体とuvの
+arm64／x64形式を確認した。ランナーはcommitのソースと一致（WindowsのCRLF差のみ正規化）。
+展開したMacアプリのdeep/strict署名検証にも成功した。
+Intel環境ではこれらを実起動していないため、ネイティブ起動・実解析は各OSの実機で確認する。
 
-1. GitHub Actionsの現在の容量・Artifact一覧・workflowの状態を確認する。
-2. ビルド対象のリビジョンを確定し、両OSのworkflowを実行する。
-3. 両runのArtifactアップロード成功を確認する。
-4. 2つのArtifactをダウンロードし、macOSはZIP内の`.app`、Windowsはone-folder一式が
-   含まれることを確認する。
-5. ユーザーへ実機テストを引き渡す。
+配布ZIPのSHA-256：
+
+```text
+e92668b43adbd4f9ec8b9cbdeae1e8ddd155c5841fbd298adb8ebe8ad7b6a840  image2prompt-macos-arm64.zip
+73605e2127b186880156be1f3a03de2dda7ebbee473551b819a0b22b4e27c697  image2prompt-windows-x64.zip
+```
+
+GitHub上は10月10日に期限を迎えるが、取得済みローカルZIPは残る。
+検証ログは`outputs/diagnostics/2026-09-26/artifact-verification.log`と両`ci-*.log`。
 
 ## Apple Silicon実機テスト
 
@@ -156,9 +164,8 @@ codesign --verify --deep --strict dist/image2prompt.app
 ## Git状態
 
 製品commitは`a3d7887`（fix: stabilize repeated image analysis and runtime cleanup）。
-9月26日のfetch時点で`origin/main`は`a301555711ea7d247609bac2f14661220d0df1ac`。
-その後のpushは自動承認レビューでコマンド実行前に拒否され、製品変更はまだリモートへ送っていない。
-この再開記録と作業記録は別の文書commitとしてローカルに保存する。
+ユーザーの明示承認後、文書commit `1f94ecc`までmainへpushした。
+両OSビルドの対象は`1f94ecc`であり、その後の引き継ぎ文書の更新とは区別する。
 
 `image2prompt/wd_tagger.py`、`tests/test_wd_tagger.py`、`experiments/`の比較研究差分は
 未コミットのまま保全。モデル、キャッシュ、生成結果、`dist/`はGit追跡対象外。

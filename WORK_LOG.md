@@ -1717,3 +1717,29 @@ uv run image2prompt-web
   pushもCI起動も未実行であり、別経路での実行は行っていない。
 - 次はユーザーからpush先とmain更新・両CI起動への明示承認を受けて再開する。
   製品commitと引き継ぎ文書をpushし、同一リビジョンの両OS成果物を取得して実機評価へ渡す。
+
+### 続行：承認後のpushとCI実行
+
+- ユーザーからmainへのpushと両CI起動の明示承認を受け、fetch後に`1f94ecc`までpushした。
+  先の自動承認レビューによる停止は解消した。
+- Apple Silicon run `36225283272`、Windows run `36225285096`を新規起動。
+  両方のhead SHAが`1f94eccc708967f86626e3423544dd592d61a630`で一致することを確認した。
+- 両runともテスト・アプリ生成・バンドル検証・アップロードまで成功した。
+  Apple Siliconは37件＋6 subtests、Windowsは36件＋6 subtests、POSIX専用1件スキップ。
+  Windows CIでONNX RuntimeがWindows Server 2025に対する警告を出したが、テストは成功。
+- Artifact IDはApple Silicon `10900049530`（508,459,803 bytes）、Windows `10900371911`
+  （869,485,238 bytes）。保存期限は2026-10-10。前回の容量制限による失敗は発生しなかった。
+  CI全ログを`outputs/diagnostics/2026-09-26/ci-macos.log`と`ci-windows.log`へ保存した。
+- 両Artifactをローカルへ取得し、GitHubが返したSHA-256と一致することを確認した。
+  保存先は`dist/test-builds/2026-09-26/`。Macは外側のArtifact ZIPから配布用ZIPを取り出した。
+- 配布ZIP両方の全件CRC、WDモデル・タグCSV・ランナー・uvの存在、アプリ本体とuvの
+  arm64／x64形式を確認した。ランナーは対象commitと一致（WindowsはCRLFのみ正規化して比較）。
+  展開したApple Siliconアプリは`codesign --verify --deep --strict`にも成功した。
+- 配布ZIPはMac 508,459,633 bytes、Windows 869,485,238 bytes。
+  SHA-256はそれぞれ`e92668b43adbd4f9ec8b9cbdeae1e8ddd155c5841fbd298adb8ebe8ad7b6a840`、
+  `73605e2127b186880156be1f3a03de2dda7ebbee473551b819a0b22b4e27c697`。
+  同じフォルダーへ`README.txt`、`SHA256SUMS.txt`、`build-info.json`を保存した。
+- Intelアプリと既存のバックアップは維持。Apple Silicon／Windowsの実機起動・実解析は未実施。
+  次回の入口を、取得済み成果物によるユーザー実機評価へ更新した。
+  文書をcommit・pushし、製品変更は`a3d7887`、両ビルド対象は`1f94ecc`として記録する。
+  研究用のwd_tagger.py・関連テスト・experimentsは未コミットのまま保全する。
