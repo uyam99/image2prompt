@@ -6,10 +6,12 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from .runtime import data_dir as _data_dir
+from .runtime import run_inference
 
 STYLE_PREFIXES = (
     ("Anime-style drawing of ", "anime-style illustration"),
@@ -80,16 +82,6 @@ def _resource_root() -> Path:
     return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
 
 
-def _data_dir() -> Path:
-    override = os.environ.get("IMAGE2PROMPT_DATA_DIR")
-    if override:
-        return Path(override)
-    if sys.platform == "win32":
-        root = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-        return root / "image2prompt"
-    return Path.home() / "Library" / "Application Support" / "image2prompt"
-
-
 def _uv_path() -> Path:
     override = os.environ.get("IMAGE2PROMPT_UV")
     bundled = _resource_root() / "bin" / ("uv.exe" if sys.platform == "win32" else "uv")
@@ -114,6 +106,7 @@ def generate_florence_layers(image_path: Path) -> tuple[str, str, float]:
     data_dir = _data_dir()
     with tempfile.TemporaryDirectory() as directory:
         output = Path(directory) / "prompt.json"
+        ready = Path(directory) / "ready"
         env = os.environ.copy()
         env.setdefault("UV_CACHE_DIR", str(data_dir / "uv"))
         env.setdefault("HF_HOME", str(data_dir / "huggingface"))
@@ -126,23 +119,13 @@ def generate_florence_layers(image_path: Path) -> tuple[str, str, float]:
             str(image_path),
             "--output",
             str(output),
+            "--ready-file",
+            str(ready),
         ]
         model_dir = _local_model_dir()
         if model_dir:
             command.extend(("--model-dir", str(model_dir)))
-        try:
-            subprocess.run(
-                command,
-                cwd=root,
-                env=env,
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=3600,
-            )
-        except subprocess.CalledProcessError as error:
-            details = (error.stderr or error.stdout or str(error)).strip()
-            raise RuntimeError(details[-1200:]) from error
+        run_inference(command, cwd=root, env=env, ready_file=ready)
         result = json.loads(output.read_text(encoding="utf-8"))
     item = result["images"][0]["results"]
     content, style = split_florence_prompt(

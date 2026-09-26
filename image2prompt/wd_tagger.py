@@ -136,7 +136,11 @@ def _predict_one(
     )
 
     started = time.perf_counter()
-    scores = session.run([model_output.name], {model_input.name: image_array})[0][0]
+    options = ort.RunOptions()
+    options.add_run_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
+    scores = session.run(
+        [model_output.name], {model_input.name: image_array}, options,
+    )[0][0]
     elapsed = time.perf_counter() - started
     result = _select_tags(
         names,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .runtime import shutdown_runtime
 from .ui import build_app
 
 
@@ -18,16 +19,20 @@ def main() -> None:
         show_api=False,
     )
     try:
-        webview.create_window(
+        window = webview.create_window(
             "image2prompt",
             local_url,
             width=1280,
             height=900,
             min_size=(800, 600),
         )
+        window.events.closing += shutdown_runtime
         webview.start()
     finally:
-        app.close(verbose=False)
+        try:
+            shutdown_runtime()
+        finally:
+            app.close(verbose=False)
 
 
 if __name__ == "__main__":

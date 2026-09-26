@@ -8,7 +8,6 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import gradio as gr
@@ -21,6 +20,7 @@ from .faithful_prompt import (
 )
 from .image_processing import ImageInputError, prepare_image
 from .natural_prompt import compose_prompt, generate_florence_layers
+from .runtime import SESSION_PATH, configure_logging, record_analysis
 
 IMAGE_SUFFIXES = frozenset(
     {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
@@ -71,7 +71,7 @@ DEFAULT_SETTINGS: dict[str, float | str] = {
 }
 TOKEN_REFERENCE = 512
 THUMBNAIL_SIZE = 384
-THUMBNAIL_DIR = Path(tempfile.gettempdir()) / "image2prompt-thumbnails"
+THUMBNAIL_DIR = SESSION_PATH / "thumbnails"
 FINDER_SORT_SCRIPT = """
 ObjC.import("Foundation");
 const data = $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile;
@@ -344,6 +344,7 @@ def select_folder_image(
     )
 
 
+@record_analysis
 def run_analysis(
     image_path: str | None,
     selected_folder_image: str | None,
@@ -378,6 +379,7 @@ def run_analysis(
     )
 
 
+@record_analysis
 def run_natural_analysis(
     image_path: str | None,
     selected_folder_image: str | None,
@@ -431,12 +433,14 @@ def set_wd_supplement(
 
 
 def build_app() -> gr.Blocks:
+    configure_logging()
     saved_settings = load_settings()
     with gr.Blocks(title="image2prompt") as app:
         gr.Markdown(
             "# image2prompt\n"
             "画像から忠実度優先形式、Danbooruタグ形式、自然言語形式の"
             "プロンプトを生成します。"
+            "\n\n運用テスト版：2026-09-06"
         )
         folder_path = gr.State("")
         folder_paths = gr.State([])
@@ -607,6 +611,8 @@ def build_app() -> gr.Blocks:
                 danbooru_tokens,
                 status,
             ],
+            concurrency_id="inference",
+            concurrency_limit=1,
         )
         natural_button.click(
             fn=run_natural_analysis,
@@ -621,6 +627,7 @@ def build_app() -> gr.Blocks:
                 natural_status,
             ],
             concurrency_limit=1,
+            concurrency_id="inference",
         )
         for component in (
             natural_content,
@@ -628,7 +635,7 @@ def build_app() -> gr.Blocks:
             natural_wd,
             natural_camera,
         ):
-            component.change(
+            component.input(
                 fn=update_natural_prompt,
                 inputs=[
                     natural_content,

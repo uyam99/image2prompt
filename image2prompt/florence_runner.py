@@ -72,11 +72,14 @@ def main() -> None:
     parser.add_argument("image", type=Path)
     parser.add_argument("--model-dir", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--ready-file", type=Path)
     args = parser.parse_args()
 
     started = time.perf_counter()
     model, processor = load_model(args.model_dir)
     load_seconds = time.perf_counter() - started
+    if args.ready_file:
+        args.ready_file.touch()
     with Image.open(args.image) as source:
         image = source.convert("RGB")
     results = {
