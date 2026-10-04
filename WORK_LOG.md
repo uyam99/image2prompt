@@ -19,7 +19,7 @@
 - `main`ブランチでGitリポジトリを初期化し、初期コミット`b236990`を作成した。
 - 実作業ルートを次のサブフォルダーへ移した。
 
-  `/Volumes/HDD8TB/WORK/codex-prj/image2prompt/image2prompt`
+  `<project-root>`
 
 ### 現在の成果物
 
@@ -1209,7 +1209,7 @@ uv run image2prompt-web
 
 ### prompt-imageフォルダーでの比較結果
 
-- `/Volumes/SSD1TB/StableDiffusion/prompt-image`直下の66画像がすべて読込可能だった。
+- `<evaluation-image-folder>`直下の66画像がすべて読込可能だった。
 - SwinV2とEVA02-Largeを全66枚、0.30～0.70の5しきい値で比較した。
 - SwinV2は合計58.58秒、平均0.739秒。EVA02-Largeは合計189.01秒、平均2.671秒。
 - 0.50での平均採用タグ数はSwinV2が19.5、EVA02-Largeが26.0だった。
@@ -1743,3 +1743,68 @@ uv run image2prompt-web
   次回の入口を、取得済み成果物によるユーザー実機評価へ更新した。
   文書をcommit・pushし、製品変更は`a3d7887`、両ビルド対象は`1f94ecc`として記録する。
   研究用のwd_tagger.py・関連テスト・experimentsは未コミットのまま保全する。
+
+### ユーザー実機報告：Apple Silicon／Windowsの起動確認完了
+
+- ユーザーから各アプリの実行確認を行い、問題なく起動したとの報告を受けた。
+  直前に渡したApple Silicon版・Windows版の両方を起動確認済みとして記録した。
+- 今回の報告範囲は起動。画像解析、通常／自然言語の交互実行、画像選択・編集、
+  終了時の子プロセス回収は結果待ちとして残し、次の確認項目へ更新した。
+- 文書のみ更新し、製品コード・配布アプリは変更していない。差分チェックに成功。
+  mainとローカルorigin/mainは`481ded3`で、今回の記録は未コミット。
+  既存の比較研究差分はそのまま保全した。
+
+### 2026-09-26の作業終了・次回への引き継ぎ
+
+- ユーザーの区切りの依頼に従い、ここで本日の作業を終了した。
+  Intel版の安定動作確認、安定性対策の製品commit化、両OSのビルドと成果物取得、
+  Apple Silicon／Windowsのユーザー実機起動確認まで完了した。
+- 本日の検証は、製品ソースのpytest 37件＋6 subtests・Ruff・実画像両モードの出力一致、
+  Apple Silicon CIの37件＋6 subtests、Windows CIの36件＋6 subtests（POSIX専用1件スキップ）、
+  配布ZIPのハッシュ・CRC・同梱物・実行形式とMac署名の確認。詳細は上記記録と診断ログを参照。
+  この区切りでは文書のみ更新し、完了済みのテスト・ビルド・実推論は繰り返していない。
+  最終の`git diff --check`は成功した。
+- 次回は両OSの画像解析、通常／自然言語の交互実行、画像選択・詳細編集、終了時の動作について
+  ユーザーの確認結果を受け取る。起動確認は完了として扱い、機能・終了確認は結果待ちとする。
+  不調時はOS・時刻・モード・画像サイズとログを照合する。評価前の新機能・モデル変更・
+  正式Releaseは進めない。
+- Intel版は`dist/image2prompt.app`、他OSの取得済みZIPと手順書は
+  `dist/test-builds/2026-09-26/`に保全。GitHub Artifactの期限は10月10日だがローカルZIPは残る。
+- 製品commitは`a3d7887`、両OSのビルド対象は`1f94ecc`、push済みの最新検証記録は`481ded3`。
+  終了時点でmainとローカルorigin/mainは`481ded3`で一致（この区切りではfetchなし）。
+  起動確認報告と今回の終了記録を含む文書2件は未コミットで保存した。
+  既存の`wd_tagger.py`・関連テスト・`experiments/`の研究差分は未コミットのまま保全した。
+
+## 2026-10-04：各OSの基準版固定とテスト版表示の削除
+
+- ユーザーからApple Silicon／Windowsとも実行に問題がないとの報告を受領し、現行版を各OSの基準として固定する。個別測定値や追加ログは取得していない。
+- UI冒頭の「運用テスト版：2026-09-06」を削除し、READMEの試作表記と実機評価状況を更新した。解析処理とバージョン0.2.0は維持。
+- Ruffとgit diff --checkに成功。UI構築確認は標準ログ保存先へのsandbox制限により初回失敗し、一時保存先へ切り替えて再確認する。
+- 配布済みアプリは未再ビルド。次は表示変更を反映した各OSアプリの再ビルド・確認。commit、push、CI、公開は未実施。既存の比較研究差分を保全した。
+- 一時ログ保存先を使用したUI構築に成功し、テスト版表示が含まれないことを確認した。
+
+### Intel版への反映
+
+- ユーザーの実行確認用にIntel版を再ビルドし、`dist/image2prompt.app`へ反映した。
+- 旧アプリを`dist/backups/2026-10-04-before-ui-cleanup/image2prompt.app`へ保存した。
+- 通常ビルドはネットワーク制限によるPyPIのDNSエラーで失敗。保存済み依存関係を使い、`UV_OFFLINE=1 zsh packaging/build_macos.sh`で成功した。
+- deep/strict署名検証、主実行ファイルのx86_64確認、生成アプリのPYZ内UIからテスト版表示が除去されていること、git diff --checkに成功。
+- ビルドログ：`outputs/diagnostics/2026-10-04/build-macos-ui-cleanup.log`。
+- 現在の作業ツリー（既存WD比較研究差分を含む）から生成。研究差分は従来どおり未コミットで保全。Apple Silicon／Windowsは未再ビルド。次はユーザーのIntel版実行確認結果を受け取る。
+
+### Intel版の表示変更後の実行確認完了
+
+- 2026-10-04、ユーザーから更新したIntel版について「OKです、問題は無いです」との報告を受領。
+- テスト版表示を削除したIntel版`dist/image2prompt.app`を確認済みの基準として保持する。
+- 次はApple Silicon／Windows版へ同じ表示変更を反映する。両OSの既存版は動作確認済みであり、表示変更後の再ビルドはまだ行っていない。
+- 今回は記録のみ更新。commit、push、CI、正式公開は行っていない。既存の研究差分を保全した。
+
+## 2026-10-04：公開基準版の整理と他OS更新
+
+- ユーザーがApple Silicon／Windows版への表示変更反映、現行版固定、GitHubのPrivate解除、解説文書整理を承認。
+- 基本バージョン0.2.0を維持し、今回の固定点を`baseline-2026-10-04`で識別する。既存v0.2.0タグは変更しない。
+- READMEを利用者向けに整理し、ソース実行・比較CLI・ビルドの説明をdocs/DEVELOPMENT.mdへ移動。docs/DISTRIBUTION.mdに配布状況を記録する。
+- 作業記録のローカル固有パスをプレースホルダーへ変更。Git全履歴の194 blobsについて秘密鍵・GitHub/Hugging Faceトークン・AWSキーのパターン検査で検出なし。この検査は全種類の情報漏洩を保証するものではない。
+- 研究用wd_tagger.py・関連テスト・experimentsは今回の製品commitから除外してローカルに保全。
+- 製品ソースのRuffと差分チェックに成功。unittestはsandboxのps制限で1件失敗し、製品ソースのディレクトリから制限外で再実行した。
+- 制限外で製品ソースのunittest 36件に成功。比較研究用テストは含めない。

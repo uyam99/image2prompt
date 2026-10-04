@@ -51,7 +51,7 @@ Windowsの子プロセス終了はtaskkill経由としたが、今回の配布�
 
 - ユーザー：Intel Mac版で通常／自然言語変換を交互に使用すると不調になることがあり、
   アプリ再起動で復旧。発生時のログは残っていない。具体的なエラー文や発生回数は不明。
-- 作業ルート：`/Volumes/HDD8TB/WORK/codex-prj/image2prompt/image2prompt`
+- 作業ルート：`<project-root>`
 - 現行HEAD：`a301555`。製品経路は8月23日採用のFlorence largeランナー。
   8月8日のPromptGen＋Qwen実験とは異なり、製品UIはQwenを呼ばない。
 - 調査機：Intel Mac、RAM 64GiB、論理CPU 20、調査開始時スワップ0。

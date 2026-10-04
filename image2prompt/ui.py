@@ -440,7 +440,6 @@ def build_app() -> gr.Blocks:
             "# image2prompt\n"
             "画像から忠実度優先形式、Danbooruタグ形式、自然言語形式の"
             "プロンプトを生成します。"
-            "\n\n運用テスト版：2026-09-06"
         )
         folder_path = gr.State("")
         folder_paths = gr.State([])
