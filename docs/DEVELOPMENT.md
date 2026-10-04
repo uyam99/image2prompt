@@ -16,7 +16,6 @@ Python 3.12と[uv](https://docs.astral.sh/uv/)を使用します。
 
 ```sh
 uv sync
-uv run python -m unittest
 uv run image2prompt-check /path/to/image.jpg
 ```
 
@@ -247,8 +246,14 @@ GitHub ActionsのApple Silicon／Windows workflowも手動実行できます。
 
 ## 検証
 
+公開リポジトリにはテストフォルダーを含めません。CIではPythonの構文確認と
+生成アプリの同梱物・実行形式の検証を行います。Macでは署名も確認します。
+
 ```sh
-uv run --with pytest pytest -q
+uv run python -m compileall -q image2prompt packaging/desktop_entry.py
 uv run --with ruff ruff check .
 git diff --check
 ```
+
+開発者のローカル環境に保持した`tests/`では、引き続き
+`uv run --with pytest pytest -q tests`を実行できます。
