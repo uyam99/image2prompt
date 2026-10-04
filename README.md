@@ -77,8 +77,6 @@ WD補足は初期状態では空で、必要なときに追加します。
 
 - [ソース実行・モデル比較・ビルド](docs/DEVELOPMENT.md)
 - [配布情報](docs/DISTRIBUTION.md)
-- [作業履歴](WORK_LOG.md)
-- [次回の再開ポイント](NEXT_RESUME_POINT.md)
 
 ## 使用モデルとライセンス
 

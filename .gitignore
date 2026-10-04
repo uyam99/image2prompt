@@ -22,3 +22,10 @@ outputs/
 build/
 dist/
 *.spec
+
+# Local work records and reference notes
+/WORK_LOG.md
+/NEXT_RESUME_POINT.md
+/INVESTIGATION_*.md
+/image2prompt 作業計画.txt
+/カメラ設定・ライティング・環境設定の定番プロンプト.txt
