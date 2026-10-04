@@ -13,8 +13,11 @@ Intel／Apple Silicon／Windowsのユーザー実行確認は完了。
 
 - UIのテスト版表示を削除。解析処理・モデル・バージョン番号は維持。
 - READMEを利用者向けに整理し、開発説明を`docs/DEVELOPMENT.md`へ分離。
-- ユーザー承認に基づき、Apple Silicon／Windows再ビルドとGitHub公開化を進める。
-- 配布物のrun、サイズ、SHA-256は`docs/DISTRIBUTION.md`へ記録する。
+- Apple Silicon／Windows再ビルド・成果物取得・検証、GitHub Public化は完了。
+- 製品commitと基本版タグは`d834f03`。その後の文書更新は製品ソースを変更しない。
+- 最新ZIPは`dist/test-builds/2026-10-04/`。run、サイズ、SHA-256は`docs/DISTRIBUTION.md`へ記録済み。
+- GitHub Artifactは2026-10-18まで。ローカルZIPは残る。GitHub Releaseへの永続掲載は未実施。
+- リポジトリのソースライセンスは未設定。
 - 公開基準ソースのunittest 36件、Ruff、差分チェックに成功。
 
 ## 保全対象

@@ -1808,3 +1808,15 @@ uv run image2prompt-web
 - 研究用wd_tagger.py・関連テスト・experimentsは今回の製品commitから除外してローカルに保全。
 - 製品ソースのRuffと差分チェックに成功。unittestはsandboxのps制限で1件失敗し、製品ソースのディレクトリから制限外で再実行した。
 - 制限外で製品ソースのunittest 36件に成功。比較研究用テストは含めない。
+- 製品commit `d834f0396f7f2c6841bf5fb62dd44c2fb0e12df5`をmainへpushし、`baseline-2026-10-04`タグを同commitに作成・pushした。
+- GitHubリポジトリをPublicへ変更し、APIのvisibility=PUBLICを確認。
+- 同一commitからApple Silicon run 37191650080、Windows run 37191651790を起動。両方ともビルド・検証・アップロードまで成功。
+- CIはApple Silicon 37件＋6 subtests、Windows 36件＋6 subtests、POSIX専用1件スキップ。ローカルのunittest件数とは実行方式が異なる。
+- Artifact IDはApple Silicon 11299027134、Windows 11298783759。期限は2026-10-18。今回の表示変更後の両OS実機確認はこれから。
+- ソースのライセンス選択を質問したが、現時点で回答なし。ライセンス未設定のまま公開し、READMEへその旨を明記した。
+- 両Artifactのダウンロードは途中で接続が停止し、範囲取得で続行・結合して完了。GitHubが返したSHA-256と両方一致したため、結合後の完全性を確認できた。
+- 配布ZIPを`dist/test-builds/2026-10-04/`へ保存。Macは外側Artifactから取り出したZIPを配布用とした。
+- 全件CRC、WDモデルとタグCSV、Florenceランナーのソース一致、アプリ本体とuvのarm64／x64、生成アプリ内UIのテスト版表示削除を確認。
+- サイズと配布ZIP SHA-256はdocs/DISTRIBUTION.md、ローカルのbuild-info.json／SHA256SUMS.txtへ記録。Mac署名検証はCIで成功。更新後の両OS実機確認はこれから。
+- 検証証跡はoutputs/diagnostics/2026-10-04/。今回はGitHub Releaseへの永続掲載は行わず、成果物はActionsとローカルZIPで提供する。
+- 最終文書をcommit・pushしてmainを同期する。基本版タグはビルド対象d834f03を維持し、研究差分は未コミットで保全する。
